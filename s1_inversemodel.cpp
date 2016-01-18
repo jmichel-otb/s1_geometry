@@ -31,6 +31,85 @@ double compute_doppler(const double& radarFreq,const ossimEcefVector& vel, const
 }
 
 
+bool interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType& records, ossimEcefPoint& pos, ossimEcefVector & vel, unsigned int deg = 8)
+{
+  unsigned int nBegin(0), nEnd(0);
+
+  pos[0] = 0;
+  pos[1] = 0;
+  pos[2] = 0;
+
+  vel[0] = 0;
+  vel[1] = 0;
+  vel[2] = 0;
+  
+  if(records.size()<deg)
+    {
+    nEnd = records.size()-1;
+    }
+  else
+    {
+
+    unsigned int t_min_idx = 0;
+    boost::posix_time::time_duration t_min = t - std::get<0>(records[0]);
+
+    if(t_min.is_negative())
+      t_min = t_min.invert_sign();
+    
+    unsigned int count = 0;
+    
+    for(auto it = records.begin();it!=records.end();++it,++count)
+      {
+      boost::posix_time::time_duration current_time = t-std::get<0>(*it);
+
+      if(current_time.is_negative())
+        current_time = current_time.invert_sign();
+      
+      if(t_min > current_time)
+        {
+        t_min_idx = count;
+        t_min = current_time;
+        }
+      }
+
+    std::cout<<t_min_idx<<std::endl;
+    
+    nBegin = std::max((int)t_min_idx-(int)deg/2+1,(int)0);
+    nEnd = std::min(nBegin+deg-1,(unsigned int)records.size());
+    nBegin = nEnd<records.size()-1 ? nBegin : nEnd-deg+1;
+    }
+
+  std::cout<<nBegin<<", "<<nEnd<<std::endl;
+  
+
+  for(unsigned int i = nBegin; i < nEnd; ++i)
+    {
+
+    double w = 1.;
+    
+    
+    for(unsigned int j = nBegin; j < nEnd; ++j)
+      {
+
+      if(j!=i)
+        {
+        double td1 = (t - std::get<0>(records[j])).total_microseconds();
+        double td2 = (std::get<0>(records[i]) - std::get<0>(records[j])).total_microseconds();
+        w*=td1/td2;
+        }
+      }
+
+    pos[0]+=w*std::get<1>(records[i])[0];
+    pos[1]+=w*std::get<1>(records[i])[1];
+    pos[2]+=w*std::get<1>(records[i])[2];
+
+    vel[0]+=w*std::get<2>(records[i])[0];
+    vel[1]+=w*std::get<2>(records[i])[1];
+    vel[2]+=w*std::get<2>(records[i])[2];
+    }
+}
+
+
 ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime acqStartTime, const double & azimythTimeIntervalInMicroSeconds, const double & nearRangeTime, const double & rangeSamplingRate, const RecordVectorType & records, const BurstRecordVectorType& burstRecords, const ossimGpt& worldPoint, boost::posix_time::ptime& estimatedTime, double & estimatedSlantRangeTime)
 {
   // First convert lat/lon to ECEF
@@ -90,9 +169,17 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
   
   //std::cout<<"Times: "<<boost::posix_time::to_simple_string(std::get<0>(*lastRecord))<<" < "<<boost::posix_time::to_simple_string(estimatedTime)<<" < "<<boost::posix_time::to_simple_string(std::get<0>(*currentRecord))<<std::endl;
 
-  ossimEcefVector deltaPos = (std::get<1>(*currentRecord)-std::get<1>(*lastRecord));
-  deltaPos = deltaPos * interp;  
-  ossimEcefPoint interSensorPos = std::get<1>(*lastRecord) + deltaPos;
+  
+  
+  // ossimEcefVector deltaPos = (std::get<1>(*currentRecord)-std::get<1>(*lastRecord));
+  // deltaPos = deltaPos * interp;  
+  // ossimEcefPoint interSensorPos = std::get<1>(*lastRecord) + deltaPos;
+
+  ossimEcefPoint interSensorPos;
+  ossimEcefVector interSensorVel;
+
+  interpolatePosVel(estimatedTime,records,interSensorPos,interSensorVel);
+
   
   //std::cout<<"Sensor positions: "<<std::get<1>(*lastRecord)<<" <
   //"<<interSensorPos<<" < "<<std::get<1>(*currentRecord)<<std::endl;
@@ -115,11 +202,14 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
 
     std::cout<<"Bistatic td: "<<boost::posix_time::to_simple_string(bistatic_td)<<std::endl;
 
-    interp = static_cast<double>((td+bistatic_td).total_microseconds())/static_cast<double>(delta_td.total_microseconds());
+    // interp = static_cast<double>((td+bistatic_td).total_microseconds())/static_cast<double>(delta_td.total_microseconds());
 
-    deltaPos = (std::get<1>(*currentRecord)-std::get<1>(*lastRecord));
-    deltaPos = deltaPos * interp;  
-    interSensorPos = std::get<1>(*lastRecord) + deltaPos;
+    // deltaPos = (std::get<1>(*currentRecord)-std::get<1>(*lastRecord));
+    // deltaPos = deltaPos * interp;  
+    // interSensorPos = std::get<1>(*lastRecord) + deltaPos;
+
+    interpolatePosVel(estimatedTime,records,interSensorPos,interSensorVel);
+    
     }
   
   ossimDpt resp;
