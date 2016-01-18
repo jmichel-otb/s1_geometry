@@ -70,16 +70,13 @@ bool interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType&
         t_min_idx = count;
         t_min = current_time;
         }
-      }
-
-    std::cout<<t_min_idx<<std::endl;
-    
+      }  
     nBegin = std::max((int)t_min_idx-(int)deg/2+1,(int)0);
     nEnd = std::min(nBegin+deg-1,(unsigned int)records.size());
     nBegin = nEnd<records.size()-1 ? nBegin : nEnd-deg+1;
     }
 
-  std::cout<<nBegin<<", "<<nEnd<<std::endl;
+
   
 
   for(unsigned int i = nBegin; i < nEnd; ++i)
