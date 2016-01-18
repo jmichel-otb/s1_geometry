@@ -31,7 +31,7 @@ double compute_doppler(const double& radarFreq,const ossimEcefVector& vel, const
 }
 
 
-ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime acqStartTime, const double & azimythTimeIntervalInMicroSeconds, const double & nearRangeDistance, const double & rangeRes, const RecordVectorType & records, const BurstRecordVectorType& burstRecords, const ossimGpt& worldPoint, boost::posix_time::ptime& estimatedTime)
+ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime acqStartTime, const double & azimythTimeIntervalInMicroSeconds, const double & nearRangeTime, const double & rangeSamplingRate, const RecordVectorType & records, const BurstRecordVectorType& burstRecords, const ossimGpt& worldPoint, boost::posix_time::ptime& estimatedTime, double & estimatedSlantRangeTime)
 {
   // First convert lat/lon to ECEF
   ossimEcefPoint inputPt(worldPoint);
@@ -192,7 +192,11 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
   // Eq 23 and 24 p. 28
 
   double range_distance = (interSensorPos-inputPt).magnitude();
-  resp.x = (range_distance-nearRangeDistance)/rangeRes;
+  estimatedSlantRangeTime = 2*range_distance/C;
+
+  std::cout<<estimatedSlantRangeTime<<" "<<nearRangeTime<<std::endl;
+  
+  resp.x = (estimatedSlantRangeTime - nearRangeTime)*rangeSamplingRate; 
 
   // TODO: Handle GRD products here
   
@@ -494,12 +498,14 @@ int main(int argc, char * argv[])
   for(auto itGcp = gcps.begin();itGcp!=gcps.end();++itGcp,++count)
     {
   boost::posix_time::ptime estimatedTime;
+  double estimatedSlantRangeTime;
 
-  ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeDistance, rangeRes,records, burstRecords,std::get<3>(*itGcp),estimatedTime);
+  ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeTime, rangeSamplingRate,records, burstRecords,std::get<3>(*itGcp),estimatedTime,estimatedSlantRangeTime);
   
   std::cout<<"ProcessingGCP #"<<count<<":"<<std::endl;
   std::cout<<"Position: "<<get<2>(*itGcp)<<", estimated: "<<estimatedPos<<", residual: "<<estimatedPos-get<2>(*itGcp)<<std::endl;
-  std::cout<<"Time: "<<boost::posix_time::to_simple_string(get<0>(*itGcp))<<", estimated: "<<boost::posix_time::to_simple_string(estimatedTime)<<", residual: "<<boost::posix_time::to_simple_string(estimatedTime-get<0>(*itGcp))<<std::endl;
+  std::cout<<"Azimuth time: "<<boost::posix_time::to_simple_string(get<0>(*itGcp))<<", estimated: "<<boost::posix_time::to_simple_string(estimatedTime)<<", residual: "<<boost::posix_time::to_simple_string(estimatedTime-get<0>(*itGcp))<<std::endl;
+  std::cout<<"Slant range time: "<<get<1>(*itGcp)<<", estimated: "<<estimatedSlantRangeTime<<", residual: "<<get<1>(*itGcp)-estimatedSlantRangeTime<<std::endl;
   std::cout<<std::endl;
 }
   
