@@ -39,7 +39,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
   
   //TODO add as member of the base class
-  isGrd = (product_type == "GRD");
+  isGRD = (product_type == "GRD");
 
   std::cout<<"Product type: "<<product_type<<std::endl;
   std::cout<<"Mode: "<<mode<<", swath: "<<swath<<", polarisation: "<<polarisation<<std::endl<<std::endl;
@@ -50,6 +50,9 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
   std::cout<<"Reading orbit records ..."<<std::endl;
   std::cout<<"Number of orbit records found: "<<xnodes.size()<<std::endl;
+
+  //TODO uncomment and adapt following code from s1_inverse to fill
+  //SarSensorModel structure
 /*
   for(auto itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
     {
