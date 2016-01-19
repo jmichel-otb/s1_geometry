@@ -9,8 +9,8 @@
 //----------------------------------------------------------------------------
 // $Id$
 
-#ifndef ossimSentinel1Model_HEADER
-#define ossimSentinel1Model_HEADER
+#ifndef ossimSarSensorModel_HEADER
+#define ossimSarSensorModel_HEADER
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
