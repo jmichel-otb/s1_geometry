@@ -35,7 +35,7 @@ double compute_doppler(const double& radarFreq,const ossimEcefVector& vel, const
 }
 
 
-bool interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType& records, ossimEcefPoint& pos, ossimEcefVector & vel, unsigned int deg = 8)
+void interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType& records, ossimEcefPoint& pos, ossimEcefVector & vel, unsigned int deg = 8)
 {
   
   unsigned int nBegin(0), nEnd(0);
