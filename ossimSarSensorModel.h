@@ -9,8 +9,8 @@
 //----------------------------------------------------------------------------
 // $Id$
 
-#ifndef ossimSentinel1Model_HEADER
-#define ossimSentinel1Model_HEADER
+#ifndef ossimSarSensorModel_HEADER
+#define ossimSarSensorModel_HEADER
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
@@ -118,7 +118,7 @@ protected:
   bool   theBistaticCorrectionNeeded; // Do we need to compute
                                       // bistatic correction ?
 
-  bool   isGrd; // True if the product is GRD. False if it is SLC
+  bool   isGRD; // True if the product is GRD. False if it is SLC
 
   const double C = 299792458;
 

@@ -25,7 +25,7 @@ ossimSarSensorModel::ossimSarSensorModel()
     theRangeSamplingRate(0.),
     theRangeResolution(0.),
     theBistaticCorrectionNeeded(false),
-    isGrd(false)
+    isGRD(false)
 {}
   
 
@@ -41,7 +41,7 @@ ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
   this->theRangeSamplingRate = m.theRangeSamplingRate;
   this->theRangeResolution = m.theRangeResolution;
   this->theBistaticCorrectionNeeded = m.theBistaticCorrectionNeeded;
-  this->isGrd = m.isGrd;
+  this->isGRD = m.isGRD;
 }
 
 /** Destructor */
@@ -69,7 +69,7 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
   // Convert azimuth time to line
   azimuthTimeToLine(azimuthTime,imPt.x);
   
-  if(isGrd)
+  if(isGRD)
     {
     // GRD case
     double groundRange(0);
