@@ -19,5 +19,7 @@ find_package ( Boost
 
 MESSAGE("${Boost_LIBRARIES}")
 
-add_executable(s1_inversemodel s1_inversemodel.cpp)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
+add_executable(s1_inversemodel s1_inversemodel.cpp ossimSarSensorModel.cpp)
 target_link_libraries(s1_inversemodel ${OTB_LIBRARIES} ${Boost_LIBRARIES})
