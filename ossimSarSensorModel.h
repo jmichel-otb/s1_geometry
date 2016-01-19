@@ -84,6 +84,16 @@ public:
   
   virtual void worldToLineSampleAzimuthRangeTime(const ossimGpt& worldPt, ossimDpt & imPt, double & azimuthTime, double & rangeTime) const;
   
+  //Pure virtual in base class
+  bool useForward() const;
+
+  /* 
+       * Returns pointer to a new instance, copy of this.
+       * Not implemented yet!  Returns NULL...
+       * 
+       */
+  ossimObject* dup() const;
+
 protected:
 
   virtual void computeRangeDoppler(const ossimEcefPoint & inputPt, double & range, double & doppler) const;
@@ -110,7 +120,7 @@ protected:
 
   double theRangeResolution; // in meters
 
-  bool isGRD;
+  bool isGrd;
 
   const double C = 299792458;
 
