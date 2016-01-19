@@ -64,7 +64,13 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
   TimeType azimuthTime;
   double rangeTime;
   
-  worldToAzimuthRangeTime(worldPt, azimuthTime, rangeTime);
+  bool success = worldToAzimuthRangeTime(worldPt, azimuthTime, rangeTime);
+
+  if(!success)
+    {
+    imPt.makeNan();
+    return;
+    }
 
   // Convert azimuth time to line
   azimuthTimeToLine(azimuthTime,imPt.x);
@@ -89,7 +95,7 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
   
 }
 
-void ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const
+bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const
 {
   // First convert lat/lon to ECEF
   ossimEcefPoint inputPt(worldPt);
@@ -101,8 +107,11 @@ void ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
   
   bool success = zeroDopplerLookup(inputPt,azimuthTime,interpSensorPos,interpSensorVel);
 
-  // TODO: Handle failure here
-
+  if(!success)
+    {
+    return false;
+    }
+  
   if(theBistaticCorrectionNeeded)
     {
     // Compute bistatic correction if needed
@@ -118,7 +127,9 @@ void ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
 
   // rangeTime is the round-tripping time to target
   double range_distance = (interpSensorPos-inputPt).magnitude();
-  rangeTime = 2*range_distance/C;  
+  rangeTime = 2*range_distance/C;
+
+  return true;
 }
   
 void ossimSarSensorModel::computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const

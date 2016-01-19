@@ -76,13 +76,15 @@ public:
   /** Destructor */
   virtual ~ossimSarSensorModel();
 
+
+  
   virtual void lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const;
 
   virtual void lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const;
 
   virtual void worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const;
   
-  virtual void worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
+  virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
   
 protected:
   virtual void computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const;
