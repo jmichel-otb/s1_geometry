@@ -110,6 +110,8 @@ protected:
 
   double theRangeResolution; // in meters
 
+  bool isGRD;
+
   const double C = 299792458;
 
 };
