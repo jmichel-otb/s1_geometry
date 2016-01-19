@@ -104,6 +104,9 @@ public:
    * azimuthTime and rangeTime will not be modified.
    */
   virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
+
+
+  bool autovalidateInverseModelFromGCPs(const double & xtol = 0.5, const double & ytol = 0.5, const double azTimeTol = 1, const double rangeTimeTo=0.001) const;
   
   //Pure virtual in base class
   bool useForward() const;

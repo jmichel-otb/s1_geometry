@@ -14,7 +14,7 @@
 namespace ossimplugins
 {
 
-  ossimSarSensorModel::ossimSarSensorModel()
+ossimSarSensorModel::ossimSarSensorModel()
   : theOrbitRecords(),
     theGCPRecords(),
     theBurstRecords(),
@@ -26,13 +26,13 @@ namespace ossimplugins
     theRangeResolution(0.),
     theBistaticCorrectionNeeded(false),
     isGRD(false)
-  {}
+{}
   
 
-  ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
-       :ossimSensorModel(m)
+ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
+  : ossimSensorModel(m)
 {
-    this->theOrbitRecords = m.theOrbitRecords;
+  this->theOrbitRecords = m.theOrbitRecords;
   this->theGCPRecords = m.theGCPRecords;
   this->theBurstRecords = m.theBurstRecords;
   this->theSlantRangeToGroundRangeRecords = m.theSlantRangeToGroundRangeRecords;
@@ -45,21 +45,21 @@ namespace ossimplugins
   this->isGRD = m.isGRD;
 }
 
-  /** Destructor */
-  ossimSarSensorModel::~ossimSarSensorModel()
-  {}
+/** Destructor */
+ossimSarSensorModel::~ossimSarSensorModel()
+{}
 
-  void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const
+void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const
 {
 // Not implemented yet
 }
 
-  void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
+void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
 {
 // Not implemented yet
 }
 
-  void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
+void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
 {
   // First compute azimuth and range time
   TimeType azimuthTime;
@@ -221,7 +221,7 @@ void ossimSarSensorModel::interpolateSensorPosVel(const TimeType & azimuthTime, 
     }
 }
 
-  void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const
+void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const
 {
   assert(theSlantRangeToGroundRangeRecords.empty()&&"The slant range to ground range records vector is empty.");
 
@@ -417,15 +417,74 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
   line = (timeSinceStartInMicroSeconds/theAzimuthTimeInterval) + currentBurst->startLine;
 }
 
-  //*************************************************************************************************
-  // Infamous DUP
-  //*************************************************************************************************
-  ossimObject* ossimSarSensorModel::dup() const
-  {
-    return new ossimSarSensorModel(*this);
-  }
-  bool ossimSarSensorModel::useForward() const
-  {
-    return false;
-  }
+//*************************************************************************************************
+// Infamous DUP
+//*************************************************************************************************
+ossimObject* ossimSarSensorModel::dup() const
+{
+  return new ossimSarSensorModel(*this);
+}
+bool ossimSarSensorModel::useForward() const
+{
+  return false;
+}
+
+bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, const double & ytol, const double azTimeTol, const double rangeTimeTol) const
+{
+  bool success = true;
+
+  unsigned int gcpId = 0;
+  
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt,++gcpId)
+    {
+    ossimDpt estimatedImPt;
+    TimeType estimatedAzimuthTime;
+    double   estimatedRangeTime;
+
+    // Estimate times
+    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    this->worldToLineSample(gcpIt->worldPt,estimatedImPt);
+
+    if(!s1)
+      {
+      success = false;
+      }
+
+    if(std::abs(estimatedImPt.x - gcpIt->imPt.x) > xtol)
+      {
+      success = false;
+      }
+
+    if(std::abs(estimatedImPt.y - gcpIt->imPt.y) > ytol)
+      {
+      success = false;
+      }
+
+    if(std::abs((estimatedAzimuthTime-gcpIt->azimuthTime).total_microseconds()>azTimeTol))
+      {
+      success = false;
+      }
+       
+    if(std::abs(estimatedRangeTime - gcpIt->slantRangeTime)>rangeTimeTol)
+      {
+      success = false;
+      }
+
+    bool verbose = true;
+
+    if(verbose)
+      {
+    
+      std::cout<<"GCP #"<<gcpId<<std::endl;
+      std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<std::endl;
+      std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<std::endl;
+      std::cout<<"Image point: ref="<<gcpIt->imPt<<", predicted="<<estimatedImPt<<", res="<<estimatedImPt-gcpIt->imPt<<std::endl;
+      std::cout<<std::endl;
+      }
+    }
+
+  return success;
+}
+
+
 }
