@@ -105,6 +105,16 @@ public:
    */
   virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
   
+  //Pure virtual in base class
+  bool useForward() const;
+
+  /* 
+       * Returns pointer to a new instance, copy of this.
+       * Not implemented yet!  Returns NULL...
+       * 
+       */
+  ossimObject* dup() const;
+
 protected:
 
   /**

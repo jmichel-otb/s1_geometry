@@ -14,7 +14,7 @@
 namespace ossimplugins
 {
 
-ossimSarSensorModel::ossimSarSensorModel()
+  ossimSarSensorModel::ossimSarSensorModel()
   : theOrbitRecords(),
     theGCPRecords(),
     theBurstRecords(),
@@ -26,12 +26,13 @@ ossimSarSensorModel::ossimSarSensorModel()
     theRangeResolution(0.),
     theBistaticCorrectionNeeded(false),
     isGRD(false)
-{}
+  {}
   
 
-ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
+  ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
+       :ossimSensorModel(m)
 {
-  this->theOrbitRecords = m.theOrbitRecords;
+    this->theOrbitRecords = m.theOrbitRecords;
   this->theGCPRecords = m.theGCPRecords;
   this->theBurstRecords = m.theBurstRecords;
   this->theSlantRangeToGroundRangeRecords = m.theSlantRangeToGroundRangeRecords;
@@ -44,21 +45,21 @@ ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
   this->isGRD = m.isGRD;
 }
 
-/** Destructor */
-ossimSarSensorModel::~ossimSarSensorModel()
-{}
+  /** Destructor */
+  ossimSarSensorModel::~ossimSarSensorModel()
+  {}
 
-void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const
+  void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const
 {
 // Not implemented yet
 }
 
-void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
+  void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
 {
 // Not implemented yet
 }
 
-void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
+  void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
 {
   // First compute azimuth and range time
   TimeType azimuthTime;
@@ -220,7 +221,7 @@ void ossimSarSensorModel::interpolateSensorPosVel(const TimeType & azimuthTime, 
     }
 }
 
-void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const
+  void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const
 {
   assert(theSlantRangeToGroundRangeRecords.empty()&&"The slant range to ground range records vector is empty.");
 
@@ -416,4 +417,15 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
   line = (timeSinceStartInMicroSeconds/theAzimuthTimeInterval) + currentBurst->startLine;
 }
 
+  //*************************************************************************************************
+  // Infamous DUP
+  //*************************************************************************************************
+  ossimObject* ossimSarSensorModel::dup() const
+  {
+    return new ossimSarSensorModel(*this);
+  }
+  bool ossimSarSensorModel::useForward() const
+  {
+    return false;
+  }
 }
