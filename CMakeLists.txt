@@ -21,5 +21,11 @@ MESSAGE("${Boost_LIBRARIES}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(s1_inversemodel s1_inversemodel.cpp ossimSarSensorModel.cpp)
+add_executable(s1_inversemodel s1_inversemodel.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
 target_link_libraries(s1_inversemodel ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(ossimSarSensorModelTest ossimSarSensorModelTest.cpp ossimSarSensorModel.cpp)
+target_link_libraries(ossimSarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
+target_link_libraries(ossimSentinel1SarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
