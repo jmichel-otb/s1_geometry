@@ -19,6 +19,10 @@ typedef std::vector<GCPType> GCPVectorType;
 typedef std::tuple<boost::posix_time::ptime,unsigned long,boost::posix_time::ptime,unsigned long> BurstRecordType;
 typedef std::vector<BurstRecordType> BurstRecordVectorType;
 
+typedef std::tuple<boost::posix_time::ptime,double,std::vector<double>> SRGRRecordType;
+typedef std::vector<SRGRRecordType> SRGRRecordVectorType;
+
+
 
 const double C = 299792458;
 
@@ -33,6 +37,7 @@ double compute_doppler(const double& radarFreq,const ossimEcefVector& vel, const
 
 bool interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType& records, ossimEcefPoint& pos, ossimEcefVector & vel, unsigned int deg = 8)
 {
+  
   unsigned int nBegin(0), nEnd(0);
 
   pos[0] = 0;
@@ -107,7 +112,76 @@ bool interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType&
 }
 
 
-ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime acqStartTime, const double & azimythTimeIntervalInMicroSeconds, const double & nearRangeTime, const double & rangeSamplingRate, const RecordVectorType & records, const BurstRecordVectorType& burstRecords, const ossimGpt& worldPoint, boost::posix_time::ptime& estimatedTime, double & estimatedSlantRangeTime)
+double slantRangeToGroundRange(const double & slantRange, const boost::posix_time::ptime& azimuthTime, const SRGRRecordVectorType & srgrRecords)
+{
+  auto it = srgrRecords.begin();
+
+  SRGRRecordType srgrRecord  = *it;
+
+  if(azimuthTime > std::get<0>(srgrRecord))
+    {
+    auto previousRecord = it;
+    
+    ++it;
+
+    auto nextrecord = it;
+
+    bool found = false;
+
+    // Look for the correct record
+    while(it!=srgrRecords.end() && !found)
+      {
+      if(azimuthTime > std::get<0>(*previousRecord)
+         && azimuthTime < std::get<0>(*nextrecord))
+        {
+        found = true;
+        }
+      else
+        {
+        previousRecord = nextrecord;
+        ++it;
+        nextrecord = it;
+        }      
+      }
+    if(!found)
+      {
+      srgrRecord = *previousRecord;
+      }
+    else
+      {
+      // If azimuth time is between 2 records, interpolate
+      double interp = (azimuthTime-std::get<0>(*previousRecord)).total_microseconds()/static_cast<double>((std::get<0>(*nextrecord)-std::get<0>(*previousRecord)).total_microseconds());
+
+      double sr0 = (1-interp) * std::get<1>(*previousRecord)+ interp*std::get<1>(*nextrecord);
+    
+      std::vector<double> coefs;
+      auto pIt = std::get<2>(*previousRecord).begin();
+      auto nIt = std::get<2>(*nextrecord).begin();
+      for(;pIt != std::get<2>(*previousRecord).end() && nIt != std::get<2>(*nextrecord).end();
+          ++pIt,++nIt)
+        {
+        coefs.push_back(interp*(*nIt)+(1-interp)*(*pIt));
+        }
+
+      srgrRecord = std::make_tuple(azimuthTime,sr0,coefs);
+      }
+    }
+
+  // Now that we have the interpolated coefs, compute ground range
+  // from slant range
+  double sr_minus_sr0 = slantRange - std::get<1>(srgrRecord);
+
+  double ground_range = 0;
+  
+  for(auto cIt = std::get<2>(srgrRecord).rbegin();cIt!=std::get<2>(srgrRecord).rend();++cIt)
+    {
+    ground_range = *cIt + sr_minus_sr0*ground_range;
+    }
+
+  return ground_range;
+}
+
+ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime acqStartTime, const double & azimythTimeIntervalInMicroSeconds, const double & nearRangeTime, const double & rangeSamplingRate, const double & rangeRes, const RecordVectorType & records, const BurstRecordVectorType& burstRecords, const SRGRRecordVectorType& srgrRecords, const ossimGpt& worldPoint, boost::posix_time::ptime& estimatedTime, double & estimatedSlantRangeTime)
 {
   // First convert lat/lon to ECEF
   ossimEcefPoint inputPt(worldPoint);
@@ -280,12 +354,22 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
 
   double range_distance = (interSensorPos-inputPt).magnitude();
   estimatedSlantRangeTime = 2*range_distance/C;
-
-  std::cout<<estimatedSlantRangeTime<<" "<<nearRangeTime<<std::endl;
+ 
+  if(srgrRecords.empty())
+    {
+    // SLC product case
   
-  resp.x = (estimatedSlantRangeTime - nearRangeTime)*rangeSamplingRate; 
+   
+    resp.x = (estimatedSlantRangeTime - nearRangeTime)*rangeSamplingRate;
+    }
+  else
+    {
+    double ground_range = slantRangeToGroundRange(range_distance,estimatedTime,srgrRecords);
+    double near_ground_range = slantRangeToGroundRange(nearRangeTime*C/2,estimatedTime,srgrRecords);
 
-  // TODO: Handle GRD products here
+    resp.x = (ground_range - near_ground_range)/rangeRes;
+    
+    }
   
   //std::cout<<"Estimated sample position: "<<resp.x<<std::endl;
 
@@ -311,6 +395,8 @@ int main(int argc, char * argv[])
   double rangeSamplingRate(0.);
   
   RecordVectorType records;
+  SRGRRecordVectorType srgrRecords;
+  
 
   ossimRefPtr<ossimXmlDocument> xmlDoc = new ossimXmlDocument(annotationXml);
   
@@ -399,8 +485,11 @@ int main(int argc, char * argv[])
   std::cout<<"Near range distance: "<<nearRangeDistance<< "m"<<std::endl;
 
   rangeSamplingRate = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/rangeSamplingRate")->getText().toDouble();
-  double rangeRes = (1/rangeSamplingRate)*C/2;
-  std::cout<<"Range sampling rate: "<<rangeSamplingRate<<" Hz (estimated range res: "<<rangeRes<<" m)"<<std::endl;
+  double estimatedRangeRes = (1/rangeSamplingRate)*C/2;
+  std::cout<<"Range sampling rate: "<<rangeSamplingRate<<" Hz (estimated range res: "<<estimatedRangeRes<<" m)"<<std::endl;
+
+  double rangeRes = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
+  std::cout<<"Range res from product: "<<rangeRes<<" m"<<std::endl;
 
   double radarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
   std::cout<<"Radar frequency: "<<radarFrequency<<" Hz"<<std::endl;
@@ -421,8 +510,6 @@ int main(int argc, char * argv[])
   
   std::cout<<"Done."<<std::endl<<std::endl;
   
-  
-
   // Now read burst records as well
   BurstRecordVectorType burstRecords;
 
@@ -503,7 +590,43 @@ int main(int argc, char * argv[])
    }
   std::cout<<"Done."<<std::endl<<std::endl;
 
+  if(isGrd)
+    {
+    std::cout<<"Reading Slant range to Ground range coefficients ..."<<std::endl;
 
+    xnodes.clear();  
+    xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
+    std::cout<<"Number of records found: "<<xnodes.size()<<std::endl;
+
+    for(auto itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
+      {
+      ossimString att1 = "azimuthTime";
+      ossimString s;
+      s = (*itNode)->findFirstNode(att1)->getText();
+      s = s.replaceAllThatMatch("T"," ");
+      boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
+    
+      att1 = "sr0";
+      double sr0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
+
+      att1 = "srgrCoefficients";
+      s = (*itNode)->findFirstNode(att1)->getText();
+      std::vector<ossimString> ssplit = s.split(" ");
+
+      std::vector<double> coefs;
+
+      for(auto cIt = ssplit.begin();cIt !=ssplit.end();++cIt)
+        {
+        coefs.push_back(cIt->toDouble());
+        }
+
+      srgrRecords.push_back(std::make_tuple(azTime,sr0,coefs));      
+      }
+
+    std::cout<<"Done."<<std::endl<<std::endl;
+    }
+  
+  
   std::cout<<"Reading ground control points ..."<<std::endl;
   GCPVectorType gcps;
   xnodes.clear();
@@ -587,7 +710,7 @@ int main(int argc, char * argv[])
   boost::posix_time::ptime estimatedTime;
   double estimatedSlantRangeTime;
 
-  ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeTime, rangeSamplingRate,records, burstRecords,std::get<3>(*itGcp),estimatedTime,estimatedSlantRangeTime);
+  ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeTime, rangeSamplingRate, rangeRes, records, burstRecords,srgrRecords,std::get<3>(*itGcp),estimatedTime,estimatedSlantRangeTime);
   
   std::cout<<"ProcessingGCP #"<<count<<":"<<std::endl;
   std::cout<<"Position: "<<get<2>(*itGcp)<<", estimated: "<<estimatedPos<<", residual: "<<estimatedPos-get<2>(*itGcp)<<std::endl;
