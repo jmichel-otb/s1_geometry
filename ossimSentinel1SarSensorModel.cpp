@@ -39,151 +39,104 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
   
   //TODO add as member of the base class
-  isGRD = (product_type == "GRD");
+  this->isGRD = (product_type == "GRD");
 
-  std::cout<<"Product type: "<<product_type<<std::endl;
-  std::cout<<"Mode: "<<mode<<", swath: "<<swath<<", polarisation: "<<polarisation<<std::endl<<std::endl;
-  
   // First, lookup position/velocity records
   std::vector<ossimRefPtr<ossimXmlNode> > xnodes;
   xmlDoc->findNodes("/product/generalAnnotation/orbitList/orbit",xnodes);
 
-  std::cout<<"Reading orbit records ..."<<std::endl;
-  std::cout<<"Number of orbit records found: "<<xnodes.size()<<std::endl;
-
   //TODO uncomment and adapt following code from s1_inverse to fill
   //SarSensorModel structure
-/*
-  for(auto itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
+
+  for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
     {
+    OrbitRecordType orbitRecord;
 
     // Retrieve acquisition time
     ossimString att1 = "time";
     ossimString s;
     s = (*itNode)->findFirstNode(att1)->getText();
     s = s.replaceAllThatMatch("T"," ");
-    std::cout<<s;
-    boost::posix_time::ptime acqTime(boost::posix_time::time_from_string(s));
+    orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
    
     // Retrieve ECEF position
-    ossimEcefPoint pos;
     att1 = "position";
     ossimString att2 = "x";
-    pos[0] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.position[0] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
     att2 = "y";
-    pos[1] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.position[1] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
     att2 = "z";
-    pos[2] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
-
-    std::cout<<", ECEF pos: "<<pos[0]<<", "<<pos[1]<<", "<<pos[2];
+    orbitRecord.position[2] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
 
     // Retrieve ECEF velocity
      ossimEcefVector vel;
     att1 = "velocity";
     att2 = "x";
-    vel[0] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.velocity[0] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
     att2 = "y";
-    vel[1] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.velocity[1] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
     att2 = "z";
-    vel[2] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
-
-    std::cout<<", ECEF vel: "<<vel[0]<<", "<<vel[1]<<", "<<vel[2]<<std::endl;
+    orbitRecord.velocity[2] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
 
     //Add one orbits record
-    theOrbitRecords.push_back(make_tuple(acqTime,pos,vel));
+    theOrbitRecords.push_back(orbitRecord);
     }
-  
-  
-  std::cout<<"Reading other useful values ..."<<std::endl;
-  ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
-
-    s = s.replaceAllThatMatch("T"," ");
-  std::cout<<"Acquisition start time: "<<s<<std::endl;
-  acqStartTime = boost::posix_time::time_from_string(s);
-
-  s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
-  s = s.replaceAllThatMatch("T"," ");
-  std::cout<<"Acquisition stop time: "<<s<<std::endl;
-  acqStopTime = boost::posix_time::time_from_string(s);
-
-  nbLines = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16();
-  nbSamples = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfSamples")->getText().toUInt16();
-
-  std::cout<<"Image size: "<<nbSamples<<" x "<<nbLines<<std::endl;
-
 
   //Parse the near range time (in seconds)
-
-  nearRangeTime = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/slantRangeTime")->getText().toDouble();
-  std::cout<<"Near range time: "<<nearRangeTime<<" s"<<std::endl;
-
-  theNearRangeDistance = nearRangeTime * C /2;
-
-  std::cout<<"Near range distance: "<<nearRangeDistance<< "m"<<std::endl;
+  theNearRangeTime = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/slantRangeTime")->getText().toDouble();
 
   //Parse the range sampling rate
-
-  rangeSamplingRate = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/rangeSamplingRate")->getText().toDouble();
-  double estimatedRangeRes = (1/rangeSamplingRate)*C/2;
-  std::cout<<"Range sampling rate: "<<rangeSamplingRate<<" Hz (estimated range res: "<<estimatedRangeRes<<" m)"<<std::endl;
+  theRangeSamplingRate = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/rangeSamplingRate")->getText().toDouble();
 
   //Parse the range resolution
-
   theRangeResolution = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
-  std::cout<<"Range res from product: "<<rangeRes<<" m"<<std::endl;
 
-  //Parse the radar frequency
-  
+  //Parse the radar frequency 
   double theRadarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
 
-  std::cout<<"Radar frequency: "<<theRadarFrequency<<" Hz"<<std::endl;
-  
-  boost::posix_time::time_duration td = (acqStopTime - acqStartTime);
-  
-  double acquisition_duration = td.total_microseconds();
-
-  std::cout<<"Acquisition duration: "<<boost::posix_time::to_simple_string(td)<<" ("<<acquisition_duration/1000000<<" s)"<<std::endl;
-
-  double estimatedAzimuthTimeIntervalInMicroSeconds = acquisition_duration/nbLines;
-  double prf = 1000000/estimatedAzimuthTimeIntervalInMicroSeconds;
-
   //Parse azimuth time interval
-
   theAzimuthTimeInterval = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
 
-  std::cout<<"Estimated prf: "<<prf<<" Hz ("<<estimatedAzimuthTimeIntervalInMicroSeconds/1000000<<" s)"<<std::endl;
-  std::cout<<"Azimuth time interval from product: "<<azimuthTimeIntervalInMicroSeconds/1000000<<" s"<<std::endl;
-  
-  std::cout<<"Done."<<std::endl<<std::endl;
   
   // Now read burst records as well
-  BurstRecordVectorType burstRecords;
-
-  std::cout<<"Reading burst records ..."<<std::endl;
   xnodes.clear();  
   xmlDoc->findNodes("/product/swathTiming/burstList/burst",xnodes);
 
   if(xnodes.empty())
     {
-  std::cout<<"No burst records found, skipping"<<std::endl;
+    BurstRecordType burstRecord;
+
+    burstRecord.startLine = 0;
+    
+    ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
+
+    s = s.replaceAllThatMatch("T"," ");
+    
+    burstRecord.azimuthStartTime = boost::posix_time::time_from_string(s);
+
+    s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
+    s = s.replaceAllThatMatch("T"," ");
+    
+    burstRecord.azimuthStopTime = boost::posix_time::time_from_string(s);
+  
+    burstRecord.endLine = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16();
+
+    theBurstRecords.push_back(burstRecord);
     }
   else
     {
-    std::cout<<"Number of burst records found: "<<xnodes.size()<<std::endl; 
-
     unsigned int linesPerBurst = xmlDoc->getRoot()->findFirstNode("swathTiming/linesPerBurst")->getText().toUInt16();
-
-    std::cout<<"LinesPerBurst: "<<linesPerBurst<<std::endl;
-
     unsigned int burstId(0);
     
-    for(auto itNode = xnodes.begin(); itNode!=xnodes.end();++itNode,++burstId)
+    for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode,++burstId)
       { 
+      BurstRecordType burstRecord;
+
       ossimString att1 = "azimuthTime";
       ossimString s;
       s = (*itNode)->findFirstNode(att1)->getText();
       s = s.replaceAllThatMatch("T"," ");
-      boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
+      ossimSarSensorModel::TimeType azTime(boost::posix_time::time_from_string(s));
 
       att1 = "firstValidSample";
       s = (*itNode)->findFirstNode(att1)->getText();
@@ -220,135 +173,122 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
          }
         }
 
-      unsigned long burstFirstValidLine = burstId*linesPerBurst + first_valid;
-      unsigned long burstLastValidLine  = burstId*linesPerBurst + last_valid;
+      burstRecord.startLine = burstId*linesPerBurst + first_valid;
+      burstRecord.endLine = burstId*linesPerBurst + last_valid;
       
+      burstRecord.azimuthStartTime = azTime + boost::posix_time::microseconds(first_valid*theAzimuthTimeInterval);
+      burstRecord.azimuthStopTime = azTime + boost::posix_time::microseconds(last_valid*theAzimuthTimeInterval);
       
-      boost::posix_time::ptime burstFirstValidTime = azTime + boost::posix_time::microseconds(first_valid*azimuthTimeIntervalInMicroSeconds);
-      boost::posix_time::ptime burstLastValidTime = azTime + boost::posix_time::microseconds(last_valid*azimuthTimeIntervalInMicroSeconds);
-
-      std::cout<<"Burst #"<<burstId<<std::endl;
-      std::cout<<"FirstValidSample: "<<burstFirstValidLine<<" ("<<burstFirstValidTime<<")"<<std::endl;
-      std::cout<<"LastValidSample: "<<burstLastValidLine<<" ("<<burstLastValidTime<<")"<<std::endl;
-      
-      burstRecords.push_back(std::make_tuple(burstFirstValidTime, burstFirstValidLine,burstLastValidTime,burstLastValidLine));
+      theBurstRecords.push_back(burstRecord);
       }
    }
-  std::cout<<"Done."<<std::endl<<std::endl;
 
-  if(isGrd)
+  if(isGRD)
     {
-    std::cout<<"Reading Slant range to Ground range coefficients ..."<<std::endl;
-
     xnodes.clear();  
     xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
-    std::cout<<"Number of records found: "<<xnodes.size()<<std::endl;
 
-    for(auto itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
+    for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
       {
+      CoordinateConversionRecordType coordRecord;
+      
       ossimString att1 = "azimuthTime";
       ossimString s;
       s = (*itNode)->findFirstNode(att1)->getText();
       s = s.replaceAllThatMatch("T"," ");
-      boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
+      coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
     
       att1 = "sr0";
-      double sr0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
+      coordRecord.rg0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
       att1 = "srgrCoefficients";
       s = (*itNode)->findFirstNode(att1)->getText();
       std::vector<ossimString> ssplit = s.split(" ");
 
-      std::vector<double> coefs;
-
       for(auto cIt = ssplit.begin();cIt !=ssplit.end();++cIt)
         {
-        coefs.push_back(cIt->toDouble());
+        coordRecord.coefs.push_back(cIt->toDouble());
         }
 
-      srgrRecords.push_back(std::make_tuple(azTime,sr0,coefs));      
+      theSlantRangeToGroundRangeRecords.push_back(coordRecord);      
       }
-
-    std::cout<<"Done."<<std::endl<<std::endl;
     }
   
-  
-  std::cout<<"Reading ground control points ..."<<std::endl;
-  GCPVectorType gcps;
   xnodes.clear();
   xmlDoc->findNodes("/product/geolocationGrid/geolocationGridPointList/geolocationGridPoint",xnodes);
-  std::cout<<"Number of GCPs found: "<<xnodes.size()<<std::endl;
-  
-  for(auto itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
+
+  for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
     {
+    GCPRecordType gcpRecord;
+    
     // Retrieve acquisition time
     ossimString att1 = "azimuthTime";
     ossimString s;
     s = (*itNode)->findFirstNode(att1)->getText();
     s = s.replaceAllThatMatch("T"," ");
-    boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
+    gcpRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
     att1 = "slantRangeTime";
-    double slantRangeTime = (*itNode)->findFirstNode(att1)->getText().toDouble();
+    gcpRecord.slantRangeTime = (*itNode)->findFirstNode(att1)->getText().toDouble();
     
-    ossimDpt imPoint;
     att1 = "pixel";
-    imPoint.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
-    // att1 = "line";
-    // imPoint.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
+    gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
-    if(!burstRecords.empty())
+
+    // In TOPSAR products, GCPs are weird (they fall in black lines
+    // between burst. This code allows to move them to a valid area of
+    // the image.
+    if(theBurstRecords.size()>2)
       {
-    boost::posix_time::ptime acqStart;
-    bool burstFound(false);
-    unsigned long acqStartLine(0);
+      ossimSarSensorModel::TimeType acqStart;
+      bool burstFound(false);
+      unsigned long acqStartLine(0);
     
-    for(auto bIt = burstRecords.rbegin();bIt!=burstRecords.rend() && !burstFound;++bIt)
+      for(std::vector<BurstRecordType>::reverse_iterator bIt = theBurstRecords.rbegin();bIt!=theBurstRecords.rend() && !burstFound;++bIt)
       {
-      if(azTime > std::get<0>(*bIt) && azTime < std::get<2>(*bIt))
+      if(gcpRecord.azimuthTime >= bIt->azimuthStartTime && gcpRecord.azimuthTime < bIt->azimuthStopTime)
         {
         burstFound = true;
-        acqStart = std::get<0>(*bIt);
-        acqStartLine = std::get<1>(*bIt);        
+        acqStart = bIt->azimuthStartTime;
+        acqStartLine = bIt->startLine;        
         }
       }
 
     if(!burstFound)
       {
-      if(azTime < std::get<0>(burstRecords.front()))
+      if(gcpRecord.azimuthTime < theBurstRecords.front().azimuthStartTime)
         {
-        acqStart = std::get<0>(burstRecords.front());
-        acqStartLine = std::get<1>(burstRecords.front());
+        acqStart = theBurstRecords.front().azimuthStartTime;
+        acqStartLine = theBurstRecords.front().startLine;
         } 
-      else if (azTime > std::get<0>(burstRecords.back()))
+      else if (gcpRecord.azimuthTime >=  theBurstRecords.front().azimuthStopTime)
         {
-        acqStart = std::get<0>(burstRecords.back());
-        acqStartLine = std::get<1>(burstRecords.back());
+        acqStart = theBurstRecords.back().azimuthStartTime;
+        acqStartLine = theBurstRecords.back().startLine;
         }
       }
-    boost::posix_time::time_duration timeSinceStart = (azTime-acqStart);
+    boost::posix_time::time_duration timeSinceStart = (gcpRecord.azimuthTime-acqStart);
       
     double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
-    imPoint.y = timeSinceStartInMicroSeconds/azimuthTimeIntervalInMicroSeconds + acqStartLine;
+    gcpRecord.imPt.y= timeSinceStartInMicroSeconds/theAzimuthTimeInterval + acqStartLine;
     }
     
     else
       {
-       att1 = "line";
-       imPoint.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
+      att1 = "line";
+      gcpRecord.imPt.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
        }
     ossimGpt geoPoint;
     att1 = "latitude";
-    geoPoint.lat = (*itNode)->findFirstNode(att1)->getText().toDouble();
+    gcpRecord.worldPt.lat = (*itNode)->findFirstNode(att1)->getText().toDouble();
     att1 = "longitude";
-    geoPoint.lon = (*itNode)->findFirstNode(att1)->getText().toDouble();
+    gcpRecord.worldPt.lon = (*itNode)->findFirstNode(att1)->getText().toDouble();
     att1 = "height";
-    geoPoint.hgt = (*itNode)->findFirstNode(att1)->getText().toDouble();
+    gcpRecord.worldPt.hgt = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
-    gcps.push_back(make_tuple(azTime,slantRangeTime,imPoint,geoPoint));
+    theGCPRecords.push_back(gcpRecord);
     }
-  std::cout<<"Done."<<std::endl<<std::endl;
-  */
+
 }
 
 } // namespace ossimplugins
