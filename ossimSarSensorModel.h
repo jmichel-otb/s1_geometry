@@ -82,16 +82,21 @@ public:
 
   virtual void worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const;
   
-  virtual void worldToLineSampleAzimuthRangeTime(const ossimGpt& worldPt, ossimDpt & imPt, double & azimuthTime, double & rangeTime) const;
+  virtual void worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
   
 protected:
+  virtual void computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const;
 
-  virtual void computeRangeDoppler(const ossimEcefPoint & inputPt, double & range, double & doppler) const;
-
-  virtual void interpolateSensorPosVel(const TimeType & azimuthTime, ossimEcefPoint& sensorPos, ossimEcefVector& sensorVel) const;
+  virtual void interpolateSensorPosVel(const TimeType & azimuthTime, ossimEcefPoint& sensorPos, ossimEcefVector& sensorVel, unsigned int deg = 8) const;
 
   virtual void slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const;
 
+  virtual bool zeroDopplerLookup(const ossimEcefPoint & inputPt, TimeType & interpAzimuthTime, ossimEcefPoint & interpSensorPos, ossimEcefVector & interpSensorVel) const;
+
+  virtual void computeBistaticCorrection(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, DurationType & bistaticCorrection) const;
+
+  virtual void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
+  
   std::vector<OrbitRecordType> theOrbitRecords;
 
   std::vector<GCPRecordType>   theGCPRecords;
@@ -109,6 +114,11 @@ protected:
   double theRangeSamplingRate; // in Hz
 
   double theRangeResolution; // in meters
+
+  bool   theBistaticCorrectionNeeded; // Do we need to compute
+                                      // bistatic correction ?
+
+  bool   isGrd; // True if the product is GRD. False if it is SLC
 
   const double C = 299792458;
 
