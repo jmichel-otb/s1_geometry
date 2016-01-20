@@ -147,7 +147,7 @@ protected:
    * Convert slant range to ground range by interpolating slant range
    * to ground range coefficients.
    * 
-   * \param[in] slantRange The slantRange to convert (meters)
+   * \param[in] slantRangeTime The slantRange to convert (meters)
    * \param[in] azimuthTime The corresponding azimuth time 
    * \param[out] groundRange The estimated ground range (meters)
    */ 

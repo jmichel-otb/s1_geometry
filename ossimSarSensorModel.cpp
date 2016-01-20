@@ -61,6 +61,8 @@ void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worl
 
 void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
 {
+  assert(theRangeResolution>0&&"theRangeResolution is null.");
+  
   // First compute azimuth and range time
   TimeType azimuthTime;
   double rangeTime;
@@ -74,16 +76,16 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
     }
 
   // Convert azimuth time to line
-  azimuthTimeToLine(azimuthTime,imPt.x);
+  azimuthTimeToLine(azimuthTime,imPt.y);
   
   if(isGRD)
-    {
+    {  
     // GRD case
     double groundRange(0);
     double nearGroundRange(0);
-    slantRangeToGroundRange(rangeTime,azimuthTime,groundRange);
-    slantRangeToGroundRange(theNearRangeTime,azimuthTime,groundRange);
-
+    slantRangeToGroundRange(rangeTime*C/2,azimuthTime,groundRange);
+    slantRangeToGroundRange(theNearRangeTime*C/2,azimuthTime,nearGroundRange);
+    
     // Eq 32 p. 31
     imPt.x = (groundRange - nearGroundRange)/theRangeResolution;
     }
@@ -127,18 +129,21 @@ bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
     }
 
   // rangeTime is the round-tripping time to target
-  double range_distance = (interpSensorPos-inputPt).magnitude();
-  rangeTime = 2*range_distance/C;
+  double rangeDistance = (interpSensorPos-inputPt).magnitude();
+  rangeTime = 2*rangeDistance/C;
 
   return true;
 }
   
 void ossimSarSensorModel::computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const
 {
+  assert(theRadarFrequency>0&&"theRadarFrequency is null");
+  
   // eq. 19, p. 25
   ossimEcefVector s2gVec = inputPt - sensorPos;
-
+  
   doppler = 2 * theRadarFrequency * sensorVel.dot(s2gVec);
+
   range = s2gVec.magnitude();
 }
 
@@ -223,72 +228,81 @@ void ossimSarSensorModel::interpolateSensorPosVel(const TimeType & azimuthTime, 
 
 void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const
 {
-  assert(theSlantRangeToGroundRangeRecords.empty()&&"The slant range to ground range records vector is empty.");
+  assert(!theSlantRangeToGroundRangeRecords.empty()&&"The slant range to ground range records vector is empty.");
 
   // First, we need to find the correct pair of records for interpolation
   std::vector<CoordinateConversionRecordType>::const_iterator it = theSlantRangeToGroundRangeRecords.begin();
 
-  CoordinateConversionRecordType srgrRecord  = *it;
-
-  if(azimuthTime > srgrRecord.azimuthTime)
+  CoordinateConversionRecordType srgrRecord;
+  
+  std::vector<CoordinateConversionRecordType>::const_iterator  previousRecord = it;
+  ++it;
+  
+  std::vector<CoordinateConversionRecordType>::const_iterator nextRecord = it;
+  
+  bool found = false;
+  
+  // Look for the correct record
+  while(it!=theSlantRangeToGroundRangeRecords.end() && !found)
     {
-    std::vector<CoordinateConversionRecordType>::const_iterator  previousRecord = it;
+    nextRecord = it;
     
-    ++it;
-
-    std::vector<CoordinateConversionRecordType>::const_iterator nextRecord = it;
-
-    bool found = false;
-
-    // Look for the correct record
-    while(it!=theSlantRangeToGroundRangeRecords.end() && !found)
+    if(azimuthTime >= previousRecord->azimuthTime
+       && azimuthTime < nextRecord->azimuthTime)
       {
-      if(azimuthTime >= previousRecord->azimuthTime
-         && azimuthTime < nextRecord->azimuthTime)
-        {
-        found = true;
-        }
-      else
-        {
-        previousRecord = nextRecord;
-        ++it;
-        nextRecord = it;
-        }      
-      }
-    if(!found)
-      {
-      srgrRecord = *previousRecord;
+      found = true;
       }
     else
       {
-      // If azimuth time is between 2 records, interpolate
-      double interp = (azimuthTime-(previousRecord->azimuthTime)).total_microseconds()/static_cast<double>((nextRecord->azimuthTime-previousRecord->azimuthTime).total_microseconds());
-
-      double sr0 = (1-interp) * previousRecord->rg0 + interp*nextRecord->rg0;
-      
-      std::vector<double> coefs;
-      std::vector<double>::const_iterator pIt = previousRecord->coefs.begin();
-      std::vector<double>::const_iterator nIt = nextRecord->coefs.begin();
-      
-      for(;pIt != previousRecord->coefs.end() && nIt != nextRecord->coefs.end();++pIt,++nIt)
-        {
-        coefs.push_back(interp*(*nIt)+(1-interp)*(*pIt));
-        }
-
-      srgrRecord.rg0 = sr0;
-      srgrRecord.coefs = coefs;
+      previousRecord = nextRecord;
+      ++it;
+      nextRecord = it;
+      }      
+    }
+  if(!found)
+    {
+    if(azimuthTime < theSlantRangeToGroundRangeRecords.front().azimuthTime)
+      {
+      srgrRecord = theSlantRangeToGroundRangeRecords.front();
+      }
+    else if(azimuthTime >= theSlantRangeToGroundRangeRecords.back().azimuthTime)
+      {
+      srgrRecord = theSlantRangeToGroundRangeRecords.back();
       }
     }
+  else
+    {  
+    assert(!previousRecord->coefs.empty()&&"Slant range to ground range previousRecord coefficients vector is empty.");
+    assert(!nextRecord->coefs.empty()&&"Slant range to ground range nextRecord coefficients vector is empty.");
+    
+    // If azimuth time is between 2 records, interpolate
+    double interp = (azimuthTime-(previousRecord->azimuthTime)).total_microseconds()/static_cast<double>((nextRecord->azimuthTime-previousRecord->azimuthTime).total_microseconds());
+    
+    srgrRecord.rg0 = (1-interp) * previousRecord->rg0 + interp*nextRecord->rg0;
+    
+    srgrRecord.coefs.clear();
+    std::vector<double>::const_iterator pIt = previousRecord->coefs.begin();
+    std::vector<double>::const_iterator nIt = nextRecord->coefs.begin();
+    
+    for(;pIt != previousRecord->coefs.end() && nIt != nextRecord->coefs.end();++pIt,++nIt)
+      {
+      srgrRecord.coefs.push_back(interp*(*nIt)+(1-interp)*(*pIt));
+      }
+    
+    assert(!srgrRecord.coefs.empty()&&"Slant range to ground range interpolated coefficients vector is empty.");
+    }
 
-// Now that we have the interpolated coefs, compute ground range
-// from slant range
+  // Now that we have the interpolated coefs, compute ground range
+  // from slant range
   double sr_minus_sr0 = slantRange -srgrRecord.rg0;
 
-  double ground_range = 0;
+  assert(!srgrRecord.coefs.empty()&&"Slant range to ground range coefficients vector is empty.");
+
+  groundRange = 0;
   
   for(std::vector<double>::const_reverse_iterator cIt = srgrRecord.coefs.rbegin();cIt!=srgrRecord.coefs.rend();++cIt)
     {
-    ground_range = *cIt + sr_minus_sr0*ground_range;
+    groundRange = *cIt + sr_minus_sr0*groundRange;
     }
 }
 
@@ -322,7 +336,7 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
 
     // compute range and doppler of current record
     computeRangeDoppler(inputPt,it->position, it->velocity, range2, doppler2);
-   
+ 
     bool dopplerSign2 = doppler2 <0;
 
     // If a change of sign is detected
@@ -344,13 +358,13 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
     {
     return false;
     }
-
+ 
   // now interpolate time and sensor position
   double interpDenom = std::abs(doppler1)+std::abs(doppler2);
 
   assert(interpDenom>0&&"Both doppler frequency are null in interpolation weight computation");
   
-  double interp = std::abs(doppler2)/interpDenom;
+  double interp = std::abs(doppler1)/interpDenom;
   
   // Note that microsecond precision is used here
   DurationType delta_td = record2->azimuthTime - record1->azimuthTime;
@@ -386,27 +400,37 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
   
   // Look for the correct burst. In most cases the number of burst
   // records will be 1 (except for TOPSAR Sentinel1 products)
-  for(; currentBurst!= theBurstRecords.end() && !burstFound; ++currentBurst)
+  for(std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin(); it!= theBurstRecords.end() && !burstFound; ++it)
     {
     
-    if(azimuthTime >= currentBurst->azimuthStartTime
-       && azimuthTime < currentBurst->azimuthStopTime)
+    if(azimuthTime >= it->azimuthStartTime
+       && azimuthTime < it->azimuthStopTime)
       {
       burstFound = true;
+      currentBurst = it;
       }
     }
 
   // If no burst is found, we will use the first (resp. last burst to
   // extrapolate line
-  if(!burstFound && theBurstRecords.size()>1)
+  if(!burstFound)
     {
-    if(azimuthTime < theBurstRecords.front().azimuthStartTime)
+  
+    if(theBurstRecords.size()>1)
       {
+      if(azimuthTime < theBurstRecords.front().azimuthStartTime)
+        {
+        currentBurst = theBurstRecords.begin();
+        } 
+      else if (azimuthTime > theBurstRecords.back().azimuthStopTime)
+        {
+        currentBurst = theBurstRecords.end()-1;
+        }
+      }
+    else
+      {
+      // Fall back to the only record
       currentBurst = theBurstRecords.begin();
-      } 
-    else if (azimuthTime > theBurstRecords.back().azimuthStopTime)
-      {
-      currentBurst = theBurstRecords.end()-1;
       }
     }
 
@@ -433,7 +457,7 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 {
   bool success = true;
 
-  unsigned int gcpId = 0;
+  unsigned int gcpId = 1;
   
   for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt,++gcpId)
     {
@@ -482,6 +506,13 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
       std::cout<<std::endl;
       }
     }
+
+  if(success)
+    {
+    std::cout<<"All GCPs within "<<ytol <<" azimuth pixel, "<<xtol<<" range pixel, "<<azTimeTol<<" s of azimuth time, "<<rangeTimeTol<<" of range time"<<std::endl;
+
+    }
+    
 
   return success;
 }
