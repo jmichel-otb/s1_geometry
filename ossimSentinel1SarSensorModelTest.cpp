@@ -25,6 +25,9 @@ int main(int argc, char * argv[])
 
   sensor->readAnnotationFile(annotationXml);
 
+  bool validate = sensor->autovalidateInverseModelFromGCPs();
+
   delete sensor;
-  return EXIT_SUCCESS;
+  
+  return validate;
 }
