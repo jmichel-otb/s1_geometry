@@ -39,7 +39,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
   
   //TODO add as member of the base class
-  this->isGRD = (product_type == "GRD");
+  isGRD = (product_type == "GRD");
 
   // First, lookup position/velocity records
   std::vector<ossimRefPtr<ossimXmlNode> > xnodes;
@@ -62,21 +62,21 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     // Retrieve ECEF position
     att1 = "position";
     ossimString att2 = "x";
-    orbitRecord.position[0] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.position[0] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
     att2 = "y";
-    orbitRecord.position[1] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.position[1] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
     att2 = "z";
-    orbitRecord.position[2] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.position[2] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
 
     // Retrieve ECEF velocity
      ossimEcefVector vel;
     att1 = "velocity";
     att2 = "x";
-    orbitRecord.velocity[0] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.velocity[0] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
     att2 = "y";
-    orbitRecord.velocity[1] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.velocity[1] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
     att2 = "z";
-    orbitRecord.velocity[2] = atof((*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().c_str());
+    orbitRecord.velocity[2] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
 
     //Add one orbits record
     theOrbitRecords.push_back(orbitRecord);
@@ -92,7 +92,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   theRangeResolution = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
 
   //Parse the radar frequency 
-  double theRadarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
+  theRadarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
 
   //Parse azimuth time interval
   theAzimuthTimeInterval = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
@@ -103,7 +103,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   xmlDoc->findNodes("/product/swathTiming/burstList/burst",xnodes);
 
   if(xnodes.empty())
-    {
+    {  
     BurstRecordType burstRecord;
 
     burstRecord.startLine = 0;
@@ -114,12 +114,14 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     
     burstRecord.azimuthStartTime = boost::posix_time::time_from_string(s);
 
+    std::cout<< burstRecord.azimuthStartTime<<std::endl;
+
     s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
     s = s.replaceAllThatMatch("T"," ");
     
     burstRecord.azimuthStopTime = boost::posix_time::time_from_string(s);
   
-    burstRecord.endLine = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16();
+    burstRecord.endLine = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16()-1;
 
     theBurstRecords.push_back(burstRecord);
     }
@@ -209,6 +211,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         {
         coordRecord.coefs.push_back(cIt->toDouble());
         }
+      assert(!coordRecord.coefs.empty()&&"The srgr record has empty coefs vector.");
 
       theSlantRangeToGroundRangeRecords.push_back(coordRecord);      
       }
