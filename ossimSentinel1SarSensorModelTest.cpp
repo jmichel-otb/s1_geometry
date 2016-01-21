@@ -28,6 +28,9 @@ int main(int argc, char * argv[])
   bool validate = sensor->autovalidateInverseModelFromGCPs();
 
   delete sensor;
+
+  if(validate)
+    return EXIT_SUCCESS;
   
-  return validate;
+  return EXIT_FAILURE;
 }

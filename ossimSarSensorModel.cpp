@@ -664,38 +664,42 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
     TimeType estimatedAzimuthTime;
     double   estimatedRangeTime;
 
+    bool thisSuccess = true;
+    
     // Estimate times
     bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
     this->worldToLineSample(gcpIt->worldPt,estimatedImPt);
 
     if(!s1)
       {
-      success = false;
+      thisSuccess = false;
       }
 
     if(std::abs(estimatedImPt.x - gcpIt->imPt.x) > xtol)
       {
-      success = false;
+      thisSuccess = false;
       }
 
     if(std::abs(estimatedImPt.y - gcpIt->imPt.y) > ytol)
       {
-      success = false;
+      thisSuccess = false;
       }
 
     if(std::abs((estimatedAzimuthTime-gcpIt->azimuthTime).total_microseconds()>azTimeTol))
       {
-      success = false;
+      thisSuccess = false;
       }
        
     if(std::abs(estimatedRangeTime - gcpIt->slantRangeTime)>rangeTimeTol)
       {
-      success = false;
+      thisSuccess = false;
       }
 
     bool verbose = true;
 
-    if(verbose)
+    success = success && thisSuccess;
+    
+    if(verbose && !thisSuccess)
       {
     
       std::cout<<"GCP #"<<gcpId<<std::endl;

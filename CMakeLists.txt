@@ -37,10 +37,10 @@ enable_testing()
 add_test( ossimSarSensorModelTest ossimSarSensorModelTest )
 
 #S1 tests
-file(GLOB MTDATA ${CMAKE_SOURCE_DIR}/data/s1/*.xml)
-LIST( LENGTH MTDATA count )
+file(GLOB s1_files ${CMAKE_SOURCE_DIR}/data/s1/*.xml)
+
 #Loop over all S1 annotation files
-foreach(index RANGE 0 ${count-1})
-  list ( GET MTDATA ${index} entry )
-  add_test( ossimSentinel1SarSensorModelTest_${index} ossimSentinel1SarSensorModelTest ${entry} )
+foreach(entry ${s1_files})
+  get_filename_component(name ${entry} NAME_WE)
+  add_test( s1_inverse_${name} ossimSentinel1SarSensorModelTest ${entry} )
 endforeach()
