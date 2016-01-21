@@ -119,13 +119,9 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
     double groundRange(0);
     double nearGroundRange(0);
     slantRangeToGroundRange(rangeTime*C/2,azimuthTime,groundRange);
-
-    // TODO: not sure we need to compute this. NearRangeTime is
-    // accounted for in srgr coefs.
-    slantRangeToGroundRange(theNearRangeTime*C/2,azimuthTime,nearGroundRange);
     
     // Eq 32 p. 31
-    imPt.x = (groundRange - nearGroundRange)/theRangeResolution;
+    imPt.x = groundRange/theRangeResolution;
     }
   else
     {
