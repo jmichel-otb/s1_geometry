@@ -24,8 +24,23 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 add_executable(s1_inversemodel s1_inversemodel.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
 target_link_libraries(s1_inversemodel ${OTB_LIBRARIES} ${Boost_LIBRARIES})
 
+
+#Test executables
 add_executable(ossimSarSensorModelTest ossimSarSensorModelTest.cpp ossimSarSensorModel.cpp)
 target_link_libraries(ossimSarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
 target_link_libraries(ossimSentinel1SarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+
+#Use ctest
+enable_testing()
+add_test( ossimSarSensorModelTest ossimSarSensorModelTest )
+
+#S1 tests
+file(GLOB MTDATA ${CMAKE_SOURCE_DIR}/data/s1/*.xml)
+LIST( LENGTH MTDATA count )
+#Loop over all S1 annotation files
+foreach(index RANGE 0 ${count-1})
+  list ( GET MTDATA ${index} entry )
+  add_test( ossimSentinel1SarSensorModelTest_${index} ossimSentinel1SarSensorModelTest ${entry} )
+endforeach()
