@@ -18,10 +18,12 @@
 #pragma GCC diagnostic ignored "-Woverloaded-virtual"
 #pragma GCC diagnostic ignored "-Wshadow"
 #include <ossim/projection/ossimSensorModel.h>
+#include <ossim/elevation/ossimHgtRef.h>
+
 #pragma GCC diagnostic pop
 #else
-#include <ossimPluginConstants.h>
 #include <ossim/projection/ossimSensorModel.h>
+#include <ossim/elevation/ossimHgtRef.h>
 #endif
 
 #include "boost/date_time/posix_time/posix_time.hpp"
@@ -105,8 +107,11 @@ public:
    */
   virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
 
+  virtual bool lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
 
   bool autovalidateInverseModelFromGCPs(const double & xtol = 0.5, const double & ytol = 0.5, const double azTimeTol = 1, const double rangeTimeTo=0.001) const;
+
+  bool autovalidateForwardModelFromGCPs() const;
   
   //Pure virtual in base class
   bool useForward() const;
@@ -153,6 +158,7 @@ protected:
    */ 
   virtual void slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const;
 
+  virtual void groundRangeToSlantRange(const double & groundRange, const TimeType & azimuthTime, double & slantRange) const;
   /**
    * Estimate the zero-doppler azimuth time and corresponding sensor
    * position and velocity from the inputPt.
@@ -182,6 +188,12 @@ protected:
    * \param[out] The estimated fractional line 
    */
   virtual void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
+
+  virtual bool lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
+
+  virtual bool projToSurface(const ossimEcefPoint& initPt, const TimeType & azimuthTime, const double & rangeTime, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
+
+  
   
   std::vector<OrbitRecordType> theOrbitRecords;
 
