@@ -16,16 +16,27 @@ int main(int argc, char * argv[])
 {
   std::cout.precision(9);
   
-  if(argc != 2)
+  if(argc != 3)
     return EXIT_FAILURE;
   
-  std::string annotationXml = argv[1];
+  std::string annotationXml = argv[2];
+  bool inverse = atoi(argv[1]);
 
+  
   ossimplugins::ossimSentinel1SarSensorModel * sensor = new ossimplugins::ossimSentinel1SarSensorModel();
 
   sensor->readAnnotationFile(annotationXml);
 
-  bool validate = sensor->autovalidateInverseModelFromGCPs();
+  bool validate(false);
+
+  if(inverse)
+    {
+    validate = sensor->autovalidateInverseModelFromGCPs();
+    }
+  else
+    {
+    validate = sensor->autovalidateForwardModelFromGCPs();
+    }
 
   delete sensor;
 

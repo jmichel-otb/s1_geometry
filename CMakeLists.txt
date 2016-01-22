@@ -42,5 +42,6 @@ file(GLOB s1_files ${CMAKE_SOURCE_DIR}/data/s1/*.xml)
 #Loop over all S1 annotation files
 foreach(entry ${s1_files})
   get_filename_component(name ${entry} NAME_WE)
-  add_test( s1_inverse_${name} ossimSentinel1SarSensorModelTest ${entry} )
+  add_test( s1_inverse_${name} ossimSentinel1SarSensorModelTest 1 ${entry})
+  add_test( s1_forward_${name} ossimSentinel1SarSensorModelTest 0 ${entry})
 endforeach()
