@@ -214,6 +214,35 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
       theSlantRangeToGroundRangeRecords.push_back(coordRecord);      
       }
+    
+    xnodes.clear();  
+    xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
+
+    for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
+      {
+      CoordinateConversionRecordType coordRecord;
+      
+      ossimString att1 = "azimuthTime";
+      ossimString s;
+      s = (*itNode)->findFirstNode(att1)->getText();
+      s = s.replaceAllThatMatch("T"," ");
+      coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
+    
+      att1 = "gr0";
+      coordRecord.rg0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
+
+      att1 = "grsrCoefficients";
+      s = (*itNode)->findFirstNode(att1)->getText();
+      std::vector<ossimString> ssplit = s.split(" ");
+
+      for(auto cIt = ssplit.begin();cIt !=ssplit.end();++cIt)
+        {
+        coordRecord.coefs.push_back(cIt->toDouble());
+        }
+      assert(!coordRecord.coefs.empty()&&"The grsr record has empty coefs vector.");
+
+      theGroundRangeToSlantRangeRecords.push_back(coordRecord);      
+      }
     }
   
   xnodes.clear();
