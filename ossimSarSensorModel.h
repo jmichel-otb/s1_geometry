@@ -109,9 +109,9 @@ public:
 
   virtual bool lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
 
-  bool autovalidateInverseModelFromGCPs(const double & xtol = 1, const double & ytol = 1, const double azTimeTol = 500, const double rangeTimeTo=0.0000000001) const;
+  bool autovalidateInverseModelFromGCPs(const double & xtol = 1, const double & ytol = 1, const double azTimeTol = 500, const double &rangeTimeTo=0.0000000001) const;
 
-  bool autovalidateForwardModelFromGCPs() const;
+  bool autovalidateForwardModelFromGCPs(const double & resTol = 5) const;
   
   //Pure virtual in base class
   bool useForward() const;

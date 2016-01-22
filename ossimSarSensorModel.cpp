@@ -705,7 +705,7 @@ bool ossimSarSensorModel::useForward() const
   return false;
 }
 
-bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, const double & ytol, const double azTimeTol, const double rangeTimeTol) const
+bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, const double & ytol, const double azTimeTol, const double & rangeTimeTol) const
 {
   bool success = true;
 
@@ -774,26 +774,37 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 }
 
 
-bool ossimSarSensorModel::autovalidateForwardModelFromGCPs() const
+bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol) const
 {
+  bool success = true;
+  bool verbose = true;
+  
   unsigned int gcpId = 1;
   
   for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt,++gcpId)
     {
     ossimGpt estimatedWorldPt;
-    
-    lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
-    
-    std::cout<<"GCP #"<<gcpId<<std::endl;
-
     ossimGpt refPt = gcpIt->worldPt;
-    std::cout<<"Im point: "<<gcpIt->imPt<<std::endl;
-    std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<refPt.distanceTo(estimatedWorldPt)<<" m"<<std::endl;
-    std::cout<<std::endl;
-    
-    
+
+    lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
+
+    double res = refPt.distanceTo(estimatedWorldPt);
+
+    if(res>resTol)
+      {
+      success = false;
+
+      if(verbose)
+        {
+        std::cout<<"GCP #"<<gcpId<<std::endl;
+
+        std::cout<<"Im point: "<<gcpIt->imPt<<std::endl;
+        std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<res<<" m"<<std::endl;
+        std::cout<<std::endl;
+        }
+      }
     }
 
-  return true;
+  return success;
 }
 }
