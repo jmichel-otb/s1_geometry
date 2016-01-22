@@ -50,10 +50,9 @@ foreach(entry ${s1_files})
 endforeach()
 
 #TSX tests
-file(GLOB MTDATA ${CMAKE_SOURCE_DIR}/data/tsx/*.xml)
-LIST( LENGTH MTDATA count )
+file(GLOB tsx_files ${CMAKE_SOURCE_DIR}/data/tsx/*.xml)
 #Loop over all S1 annotation files
-foreach(index RANGE 0 ${count-1})
-  list ( GET MTDATA ${index} entry )
-  add_test( ossimTerraSarXSarSensorModelTest_${index} ossimTerraSarXSarSensorModelTest ${entry} )
+foreach(entry ${tsx_files})
+  get_filename_component(name ${entry} NAME_WE)
+  add_test( tsx_inverse_${name} ossimTerraSarXSarSensorModelTest ${entry} )
 endforeach()
