@@ -29,6 +29,9 @@ ossimTerraSarXSarSensorModel::~ossimTerraSarXSarSensorModel()
 
 void ossimTerraSarXSarSensorModel::readAnnotationFile(const std::string & annotationXml)
 {
+  
+  //isGRD
+
   //Parse specific metadata for TerraSarX
   std::cerr << "Not implemented yet." << std::endl;
 }

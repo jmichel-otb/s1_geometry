@@ -38,7 +38,6 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
   std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
   
-  //TODO add as member of the base class
   isGRD = (product_type == "GRD");
 
   // First, lookup position/velocity records
