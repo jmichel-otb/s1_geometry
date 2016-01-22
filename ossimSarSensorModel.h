@@ -116,12 +116,14 @@ public:
   //Pure virtual in base class
   bool useForward() const;
 
-  /* 
-       * Returns pointer to a new instance, copy of this.
-       * Not implemented yet!  Returns NULL...
-       * 
-       */
+  /** 
+   * Returns pointer to a new instance, copy of this.
+   * Not implemented yet!  Returns NULL...
+   * 
+   */
   ossimObject* dup() const;
+
+  //TODO: Add virtual method readAnnotationFile?
 
 protected:
 
