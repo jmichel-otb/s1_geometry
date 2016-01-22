@@ -107,10 +107,13 @@ public:
    */
   virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
 
+  // TODO: document me
   virtual bool lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
 
+  // TODO: document me
   bool autovalidateInverseModelFromGCPs(const double & xtol = 1, const double & ytol = 1, const double azTimeTol = 500, const double &rangeTimeTo=0.0000000001) const;
 
+  // TODO: document me
   bool autovalidateForwardModelFromGCPs(const double & resTol = 5) const;
   
   //Pure virtual in base class
@@ -160,7 +163,11 @@ protected:
    */ 
   virtual void slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const;
 
+  // TODO: Document me
   virtual void groundRangeToSlantRange(const double & groundRange, const TimeType & azimuthTime, double & slantRange) const;
+
+  // TODO: Document me
+  virtual void applyCoordinateConversion(const double & in, const TimeType& azimuthTime, const std::vector<CoordinateConversionRecordType> & records, double & out) const;
   /**
    * Estimate the zero-doppler azimuth time and corresponding sensor
    * position and velocity from the inputPt.
@@ -190,13 +197,13 @@ protected:
    * \param[out] The estimated fractional line 
    */
   virtual void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
-
+  
+  // TODO: document me
   virtual bool lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
 
+  // TODO: document me
   virtual bool projToSurface(const ossimEcefPoint& initPt, const TimeType & azimuthTime, const double & rangeTime, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
 
-  
-  
   std::vector<OrbitRecordType> theOrbitRecords;
 
   std::vector<GCPRecordType>   theGCPRecords;
@@ -204,6 +211,8 @@ protected:
   std::vector<BurstRecordType> theBurstRecords;
 
   std::vector<CoordinateConversionRecordType> theSlantRangeToGroundRangeRecords;
+
+  std::vector<CoordinateConversionRecordType> theGroundRangeToSlantRangeRecords;
 
   double theRadarFrequency; // in Hz
 

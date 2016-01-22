@@ -20,6 +20,7 @@ ossimSarSensorModel::ossimSarSensorModel()
     theGCPRecords(),
     theBurstRecords(),
     theSlantRangeToGroundRangeRecords(),
+    theGroundRangeToSlantRangeRecords(),
     theRadarFrequency(0.),
     theAzimuthTimeInterval(0.),
     theNearRangeTime(0.),
@@ -37,6 +38,7 @@ ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
   this->theGCPRecords = m.theGCPRecords;
   this->theBurstRecords = m.theBurstRecords;
   this->theSlantRangeToGroundRangeRecords = m.theSlantRangeToGroundRangeRecords;
+  this->theGroundRangeToSlantRangeRecords = m.theGroundRangeToSlantRangeRecords;
   this->theRadarFrequency = m.theRadarFrequency;
   this->theAzimuthTimeInterval = m.theAzimuthTimeInterval;
   this->theNearRangeTime = m.theNearRangeTime;
@@ -312,10 +314,20 @@ void ossimSarSensorModel::interpolateSensorPosVel(const TimeType & azimuthTime, 
 
 void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const
 {
-  assert(!theSlantRangeToGroundRangeRecords.empty()&&"The slant range to ground range records vector is empty.");
+  applyCoordinateConversion(slantRange,azimuthTime,theSlantRangeToGroundRangeRecords,groundRange);
+}
+
+void ossimSarSensorModel::groundRangeToSlantRange(const double & groundRange, const TimeType & azimuthTime, double & slantRange) const
+{
+  applyCoordinateConversion(groundRange,azimuthTime,theGroundRangeToSlantRangeRecords,slantRange);
+}
+
+void ossimSarSensorModel::applyCoordinateConversion(const double & in, const TimeType& azimuthTime, const std::vector<CoordinateConversionRecordType> & records, double & out) const
+{
+  assert(!records.empty()&&"The records vector is empty.");
 
   // First, we need to find the correct pair of records for interpolation
-  std::vector<CoordinateConversionRecordType>::const_iterator it = theSlantRangeToGroundRangeRecords.begin();
+  std::vector<CoordinateConversionRecordType>::const_iterator it = records.begin();
 
   CoordinateConversionRecordType srgrRecord;
   
@@ -327,7 +339,7 @@ void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, con
   bool found = false;
   
   // Look for the correct record
-  while(it!=theSlantRangeToGroundRangeRecords.end() && !found)
+  while(it!=records.end() && !found)
     {
     nextRecord = it;
     
@@ -345,19 +357,19 @@ void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, con
     }
   if(!found)
     {
-    if(azimuthTime < theSlantRangeToGroundRangeRecords.front().azimuthTime)
+    if(azimuthTime < records.front().azimuthTime)
       {
-      srgrRecord = theSlantRangeToGroundRangeRecords.front();
+      srgrRecord = records.front();
       }
-    else if(azimuthTime >= theSlantRangeToGroundRangeRecords.back().azimuthTime)
+    else if(azimuthTime >= records.back().azimuthTime)
       {
-      srgrRecord = theSlantRangeToGroundRangeRecords.back();
+      srgrRecord = records.back();
       }
     }
   else
     {  
-    assert(!previousRecord->coefs.empty()&&"Slant range to ground range previousRecord coefficients vector is empty.");
-    assert(!nextRecord->coefs.empty()&&"Slant range to ground range nextRecord coefficients vector is empty.");
+    assert(!previousRecord->coefs.empty()&&"previousRecord coefficients vector is empty.");
+    assert(!nextRecord->coefs.empty()&&"nextRecord coefficients vector is empty.");
     
     // If azimuth time is between 2 records, interpolate
     double interp = (azimuthTime-(previousRecord->azimuthTime)).total_microseconds()/static_cast<double>((nextRecord->azimuthTime-previousRecord->azimuthTime).total_microseconds());
@@ -378,21 +390,18 @@ void ossimSarSensorModel::slantRangeToGroundRange(const double & slantRange, con
 
   // Now that we have the interpolated coefs, compute ground range
   // from slant range
-  double sr_minus_sr0 = slantRange -srgrRecord.rg0;
+  double sr_minus_sr0 =  in-srgrRecord.rg0;
 
   assert(!srgrRecord.coefs.empty()&&"Slant range to ground range coefficients vector is empty.");
 
-  groundRange = 0;
+  out = 0;
   
   for(std::vector<double>::const_reverse_iterator cIt = srgrRecord.coefs.rbegin();cIt!=srgrRecord.coefs.rend();++cIt)
     {
-    groundRange = *cIt + sr_minus_sr0*groundRange;
+    out = *cIt + sr_minus_sr0*out;
     }
-}
 
-void ossimSarSensorModel::groundRangeToSlantRange(const double & groundRange, const TimeType & azimuthTime, double & slantRange) const
-{
-  
+
 
 }
 
