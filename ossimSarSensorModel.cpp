@@ -58,24 +58,30 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
   double rangeTime;
   TimeType azimuthTime;
 
-  lineSampleToAzimuthRangeTime(imPt,azimuthTime,rangeTime);
+  bool success = lineSampleToAzimuthRangeTime(imPt,azimuthTime,rangeTime);
+
+  if(!success)
+    {
+    worldPt.makeNan();
+    return;
+    }
 
   // Find the closest GCP
-  double distance = std::abs(imPt.y-theGCPRecords.front().imPt.y);  
+  double distance = (imPt-theGCPRecords.front().imPt).length();  
 
   std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
 
   for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
       gcpIt!=theGCPRecords.end();++gcpIt)
     {
-    if(std::abs(imPt.x-gcpIt->imPt.x) < distance)
+    if((imPt-gcpIt->imPt).length() < distance)
       {
-      distance = std::abs(imPt.x-gcpIt->imPt.x);
+      distance = (imPt-gcpIt->imPt).length();
       refGcp = gcpIt;
       }
     }
 
-  ossimGpt refPt = theGCPRecords.front().worldPt;
+  ossimGpt refPt = refGcp->worldPt;
 
   // Set the height reference
   ossim_float64 hgtSet;
@@ -205,8 +211,10 @@ bool ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, Ti
     }
   else
     {
-    rangeTime = theNearRangeTime + imPt.x/theRangeSamplingRate;
+    rangeTime = theNearRangeTime + imPt.x*(1/theRangeSamplingRate);
     }
+
+  return true;
 }
   
 void ossimSarSensorModel::computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const
@@ -217,8 +225,6 @@ void ossimSarSensorModel::computeRangeDoppler(const ossimEcefPoint & inputPt, co
   ossimEcefVector s2gVec = inputPt - sensorPos;
 
   range = s2gVec.magnitude();
-
-  double lambda = (C/theRadarFrequency);
 
   double coef = -2*C/(theRadarFrequency*range);
  
@@ -535,17 +541,24 @@ bool ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
   std::vector<BurstRecordType>::const_iterator currentBurst = theBurstRecords.begin();
 
   bool burstFound(false);
-  
-  // Look for the correct burst. In most cases the number of burst
-  // records will be 1 (except for TOPSAR Sentinel1 products)
-  for(std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin(); it!= theBurstRecords.end() && !burstFound; ++it)
+
+  if(theBurstRecords.size() == 1)
     {
-    
-    if(line >= it->startLine
-       && line < it->endLine)
+    burstFound = true;
+    }
+  else
+    {
+    // Look for the correct burst. In most cases the number of burst
+    // records will be 1 (except for TOPSAR Sentinel1 products)
+    for(std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin(); it!= theBurstRecords.end() && !burstFound; ++it)
       {
-      burstFound = true;
-      currentBurst = it;
+    
+      if(line >= it->startLine
+         && line < it->endLine)
+        {
+        burstFound = true;
+        currentBurst = it;
+        }
       }
     }
 
@@ -569,7 +582,7 @@ bool ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
 
 
 bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const TimeType & azimuthTime, const double & rangeTime, const ossimHgtRef * hgtRef, ossimEcefPoint & ellPt) const
-{
+{ 
   // Set slopes for tangent plane
   ossim_float64 sx  = 0.0;
   ossim_float64 sy  = 0.0;
@@ -594,21 +607,27 @@ bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const Time
 
    double range = rangeTime * C/2;
    
-    // Initialize criteria
-   double nearRange = theNearRangeTime * C/2;
+   // Ensure we make at least one loop
+   bool init = true;
    
-   F(1)=nearRange;
    ossim_int32 iter = 0;
-   while ((abs(F(1))>=0.01 || abs(F(2))>=0.000001 || abs(F(3))>=0.01) && iter<1000)
-   {
-   // Compute current latitude/longitude estimate
-      ossimGpt pg(rg);
-      
-      // Set reference point @ desired elevation
-      ossim_float64 atHgt = hgtRef->getRefHeight(pg);
-      // std::cout<<"hgt="<<atHgt<<std::endl;
-      pg.height(atHgt);
-      ossimEcefPoint rt(pg);
+   // Implement simple Levenberg-Marquart algorithm
+   // Convergence thresholds:
+   // F(1) Thresh on range diff = 0.01 m
+   // F(2) Thresh on doppler diff = 0.001 Hz
+   // F(3) Thresh on elevation diff = 0.1 m
+   while ((init || abs(F(1))>=0.1 || abs(F(2))>=0.001 || abs(F(3))>=0.1) && iter<10)
+     {
+     if(init)
+       init =false;
+     
+     // Compute current latitude/longitude estimate
+     ossimGpt pg(rg);
+   
+     // Set reference point @ desired elevation
+     ossim_float64 atHgt = hgtRef->getRefHeight(pg);
+     pg.height(atHgt);
+     ossimEcefPoint rt(pg);
       
       // Define ENU space at reference point
       ossimLsrSpace enu(pg);
@@ -625,25 +644,38 @@ bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const Time
       ossim_float64 diffHgt = st.dot(rg-rt);
       
       // Compute current fr, fd, ft
-      F(1) = range-rngComp;
-      F(2) = -dopComp;
+      F(1) = rngComp-range;
+      F(2) = dopComp;
       F(3) = diffHgt;
-
-      // std::cout<<F<<std::endl;
       
-      // Compute fr partials
-      ossimEcefVector delta = rg - sensorPos;
-      ossimEcefVector deltaUv = delta.unitVector();
-      ossimEcefVector p_fr = -deltaUv;
-      // Compute fd partials
-      ossim_float64 vDotr = sensorVel.dot(deltaUv);
-      ossimEcefVector p_fd = (sensorVel - deltaUv*vDotr)/rngComp;
-      // Compute ft partials
-      ossimColumnVector3d p_ft = enu.lsrToEcefRotMatrix()*tpnn;
+      // Delta use for partial derivatives estimation (in meters)
+      double d = 10.;
+
+      // Compute partial derivative
+      ossimEcefVector p_fr, p_fd, p_ft,dx(d,0,0),dy(0,d,0),dz(0,0,d);
+
+      ossim_float64 rdx,rdy,rdz, fdx,fdy,fdz;
+
+      computeRangeDoppler(rg+dx,sensorPos,sensorVel,rdx,fdx);
+      p_fr[0] = (rngComp - rdx)/d;
+      p_fd[0] = (dopComp - fdx)/d;
+      p_fr[0]= (st.dot(-dx))/d;
+
+      computeRangeDoppler(rg+dy,sensorPos,sensorVel,rdy,fdy);
+      p_fr[1] = (rngComp - rdy)/d;
+      p_fd[1] = (dopComp - fdy)/d;
+      p_ft[1] = (st.dot(-dy))/d;
+
+      computeRangeDoppler(rg+dz,sensorPos,sensorVel,rdz,fdz);
+      p_fr[2] = (rngComp - rdz)/d;
+      p_fd[2] = (dopComp - fdz)/d;
+      p_ft[2] = (st.dot(-dz))/d;
+      
       // Form B-matrix
       NEWMAT::Matrix B = ossimMatrix3x3::create(p_fr[0], p_fr[1], p_fr[2],
                                                 p_fd[0], p_fd[1], p_fd[2],
                                                 p_ft[0], p_ft[1], p_ft[2]);
+      
       // Form coefficient matrix & discrepancy vector
       BtF << B.t()*F;
       BtB << B.t()*B;
@@ -651,13 +683,15 @@ bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const Time
       dR = solveLeastSquares(BtB, BtF);
       // Update estimate
       for (ossim_int32 k=0; k<3; k++)
-         rg[k] -= dR(k+1);
+         rg[k] += dR(k+1);
       iter++;
    }
    // Set intersection for return
    ellPt = rg;
    return true;
 }
+
+
 
 //*************************************************************************************************
 // Infamous DUP
