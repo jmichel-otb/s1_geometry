@@ -60,6 +60,21 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
 
   lineSampleToAzimuthRangeTime(imPt,azimuthTime,rangeTime);
 
+  // Find the closest GCP
+  double distance = std::abs(imPt.y-theGCPRecords.front().imPt.y);  
+
+  std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
+
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
+      gcpIt!=theGCPRecords.end();++gcpIt)
+    {
+    if(std::abs(imPt.x-gcpIt->imPt.x) < distance)
+      {
+      distance = std::abs(imPt.x-gcpIt->imPt.x);
+      refGcp = gcpIt;
+      }
+    }
+
   ossimGpt refPt = theGCPRecords.front().worldPt;
 
   // Set the height reference
@@ -148,7 +163,7 @@ bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
     {
     return false;
     }
-  
+ 
   if(theBistaticCorrectionNeeded)
     {
     // Compute bistatic correction if needed
@@ -190,7 +205,7 @@ bool ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, Ti
     }
   else
     {
-    rangeTime = theNearRangeTime + theRangeSamplingRate * imPt.x;
+    rangeTime = theNearRangeTime + imPt.x/theRangeSamplingRate;
     }
 }
   
@@ -200,10 +215,14 @@ void ossimSarSensorModel::computeRangeDoppler(const ossimEcefPoint & inputPt, co
   
   // eq. 19, p. 25
   ossimEcefVector s2gVec = inputPt - sensorPos;
-  
-  doppler = 2 * theRadarFrequency * sensorVel.dot(s2gVec);
 
   range = s2gVec.magnitude();
+
+  double lambda = (C/theRadarFrequency);
+
+  double coef = -2*C/(theRadarFrequency*range);
+ 
+  doppler = coef * sensorVel.dot(s2gVec);
 }
 
 void ossimSarSensorModel::interpolateSensorPosVel(const TimeType & azimuthTime, ossimEcefPoint& sensorPos, ossimEcefVector& sensorVel, unsigned int deg) const
@@ -379,11 +398,14 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
   
   std::vector<OrbitRecordType>::const_iterator it = theOrbitRecords.begin();
 
-  double range1(0.), doppler1(0.), range2(0.), doppler2(0.);
+  double doppler1(0.), doppler2(0.);
 
   // Compute range and doppler of first record
-  computeRangeDoppler(inputPt,it->position, it->velocity, range1, doppler1);
-
+  // NOTE: here we only use the scalar product with vel and discard
+  // the constant coef as it has no impact on doppler sign
+  
+  doppler1 = (inputPt-it->position).dot(it->velocity);
+  
   std::vector<OrbitRecordType>::const_iterator record1 = it;
   
   bool dopplerSign1 = doppler1 < 0;
@@ -400,7 +422,7 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
     record2 = it;
 
     // compute range and doppler of current record
-    computeRangeDoppler(inputPt,it->position, it->velocity, range2, doppler2);
+    doppler2 = (inputPt-it->position).dot(it->velocity);
  
     bool dopplerSign2 = doppler2 <0;
 
@@ -577,13 +599,14 @@ bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const Time
    
    F(1)=nearRange;
    ossim_int32 iter = 0;
-   while ((F(1)>=nearRange || F(2)>=0.0003048 || F(3)>=0.5) && iter<100)
+   while ((abs(F(1))>=0.01 || abs(F(2))>=0.000001 || abs(F(3))>=0.01) && iter<1000)
    {
    // Compute current latitude/longitude estimate
       ossimGpt pg(rg);
       
       // Set reference point @ desired elevation
       ossim_float64 atHgt = hgtRef->getRefHeight(pg);
+      // std::cout<<"hgt="<<atHgt<<std::endl;
       pg.height(atHgt);
       ossimEcefPoint rt(pg);
       
@@ -602,11 +625,11 @@ bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const Time
       ossim_float64 diffHgt = st.dot(rg-rt);
       
       // Compute current fr, fd, ft
-      F(1) = rngComp - range;
-      F(2) = dopComp;
+      F(1) = range-rngComp;
+      F(2) = -dopComp;
       F(3) = diffHgt;
 
-      std::cout<<rngComp - range<<", "<<dopComp<<std::endl;
+      // std::cout<<F<<std::endl;
       
       // Compute fr partials
       ossimEcefVector delta = rg - sensorPos;
@@ -730,8 +753,8 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs() const
     std::cout<<"GCP #"<<gcpId<<std::endl;
 
     ossimGpt refPt = gcpIt->worldPt;
-    
-    std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<std::endl;
+    std::cout<<"Im point: "<<gcpIt->imPt<<std::endl;
+    std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<refPt.distanceTo(estimatedWorldPt)<<" m"<<std::endl;
     std::cout<<std::endl;
     
     
