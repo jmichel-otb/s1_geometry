@@ -32,6 +32,9 @@ target_link_libraries(ossimSarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES
 add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
 target_link_libraries(ossimSentinel1SarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
 
+add_executable(ossimTerraSarXSarSensorModelTest ossimTerraSarXSarSensorModelTest.cpp ossimSarSensorModel.cpp ossimTerraSarXSarSensorModel.cpp)
+target_link_libraries(ossimTerraSarXSarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+
 #Use ctest
 enable_testing()
 add_test( ossimSarSensorModelTest ossimSarSensorModelTest )
@@ -43,4 +46,13 @@ LIST( LENGTH MTDATA count )
 foreach(index RANGE 0 ${count-1})
   list ( GET MTDATA ${index} entry )
   add_test( ossimSentinel1SarSensorModelTest_${index} ossimSentinel1SarSensorModelTest ${entry} )
+endforeach()
+
+#TSX tests
+file(GLOB MTDATA ${CMAKE_SOURCE_DIR}/data/tsx/*.xml)
+LIST( LENGTH MTDATA count )
+#Loop over all S1 annotation files
+foreach(index RANGE 0 ${count-1})
+  list ( GET MTDATA ${index} entry )
+  add_test( ossimTerraSarXSarSensorModelTest_${index} ossimTerraSarXSarSensorModelTest ${entry} )
 endforeach()
