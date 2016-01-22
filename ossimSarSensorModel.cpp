@@ -208,7 +208,7 @@ bool ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, Ti
     {
     // Handle grd case here
     double slantRange;
-    groundRangeToSlantRange(imPt.x,azimuthTime, rangeTime);
+    groundRangeToSlantRange(imPt.x*theRangeResolution,azimuthTime, slantRange);
     rangeTime = 2*slantRange/C;
     }
   else
@@ -795,6 +795,11 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
     ossimGpt estimatedWorldPt;
     ossimGpt refPt = gcpIt->worldPt;
 
+    double estimatedRangeTime;
+    TimeType estimatedAzimuthTime;
+
+    lineSampleToAzimuthRangeTime(gcpIt->imPt,estimatedAzimuthTime,estimatedRangeTime);
+    
     lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
 
     double res = refPt.distanceTo(estimatedWorldPt);
@@ -806,7 +811,8 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
       if(verbose)
         {
         std::cout<<"GCP #"<<gcpId<<std::endl;
-
+        std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<std::endl;
+        std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<std::endl;
         std::cout<<"Im point: "<<gcpIt->imPt<<std::endl;
         std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<res<<" m"<<std::endl;
         std::cout<<std::endl;
