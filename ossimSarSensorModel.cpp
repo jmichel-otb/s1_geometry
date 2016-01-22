@@ -96,18 +96,12 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
     hgtSet = heightAboveEllipsoid;
     }
   ossimHgtRef hgtRef(AT_HGT, hgtSet);
-
-  ossimEcefPoint sensorPos;
-  ossimEcefVector sensorVel;
-  
-  interpolateSensorPosVel(azimuthTime,sensorPos,sensorVel);
   
   //double range, doppler;
   ossimEcefPoint ellPt;
   projToSurface(refPt,azimuthTime,rangeTime,&hgtRef,ellPt);
 
   ossimGpt gpt(ellPt);
-
   
   worldPt = ossimGpt(ellPt);
 }
@@ -115,6 +109,47 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
 void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
 {
 // Not implemented yet
+
+  assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
+  
+  // Not implemented yet
+  double rangeTime;
+  TimeType azimuthTime;
+
+  bool success = lineSampleToAzimuthRangeTime(imPt,azimuthTime,rangeTime);
+
+  if(!success)
+    {
+    worldPt.makeNan();
+    return;
+    }
+
+  // Find the closest GCP
+  double distance = (imPt-theGCPRecords.front().imPt).length();  
+
+  std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
+
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
+      gcpIt!=theGCPRecords.end();++gcpIt)
+    {
+    if((imPt-gcpIt->imPt).length() < distance)
+      {
+      distance = (imPt-gcpIt->imPt).length();
+      refGcp = gcpIt;
+      }
+    }
+
+  ossimGpt refPt = refGcp->worldPt;
+
+  ossimHgtRef hgtRef(AT_DEM);
+
+  //double range, doppler;
+  ossimEcefPoint ellPt;
+  projToSurface(refPt,azimuthTime,rangeTime,&hgtRef,ellPt);
+
+  ossimGpt gpt(ellPt);
+  
+  worldPt = ossimGpt(ellPt);
 }
 
 void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
