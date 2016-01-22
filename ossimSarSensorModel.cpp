@@ -716,6 +716,11 @@ bool ossimSarSensorModel::useForward() const
 
 bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, const double & ytol, const double azTimeTol, const double & rangeTimeTol) const
 {
+  if(theGCPRecords.empty())
+    {
+      return false;
+    }
+
   bool success = true;
 
   unsigned int gcpId = 1;
@@ -761,7 +766,7 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 
     success = success && thisSuccess;
     
-    if(verbose && !thisSuccess)
+    if(verbose)
       {
     
       std::cout<<"GCP #"<<gcpId<<std::endl;

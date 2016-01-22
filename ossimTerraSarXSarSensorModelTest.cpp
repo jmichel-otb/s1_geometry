@@ -16,18 +16,32 @@ int main(int argc, char * argv[])
 {
   std::cout.precision(9);
   
-  if(argc != 2)
+  if(argc != 4)
     return EXIT_FAILURE;
   
-  std::string annotationXml = argv[1];
+  std::string annotationXml = argv[2];
+  std::string geoXml = argv[3];
+  bool inverse = atoi(argv[1]);
 
   ossimplugins::ossimTerraSarXSarSensorModel * sensor = new ossimplugins::ossimTerraSarXSarSensorModel();
 
-  sensor->readAnnotationFile(annotationXml);
+  sensor->readAnnotationFile(annotationXml, geoXml);
 
-  bool validate = sensor->autovalidateInverseModelFromGCPs();
+  bool validate(false);
+
+  if(inverse)
+    {
+    validate = sensor->autovalidateInverseModelFromGCPs();
+    }
+  else
+    {
+    validate = sensor->autovalidateForwardModelFromGCPs();
+    }
 
   delete sensor;
+
+  if(validate)
+    return EXIT_SUCCESS;
   
-  return validate;
+  return EXIT_FAILURE;
 }
