@@ -27,7 +27,9 @@ ossimSarSensorModel::ossimSarSensorModel()
     theRangeSamplingRate(0.),
     theRangeResolution(0.),
     theBistaticCorrectionNeeded(false),
-    isGRD(false)
+    isGRD(false),
+    theAzimuthTimeOffset(0),
+    theRangeTimeOffset(0)
 {}
   
 
@@ -46,6 +48,9 @@ ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
   this->theRangeResolution = m.theRangeResolution;
   this->theBistaticCorrectionNeeded = m.theBistaticCorrectionNeeded;
   this->isGRD = m.isGRD;
+  this->theAzimuthTimeOffset = m.theAzimuthTimeOffset;
+  this->theRangeTimeOffset = m.theRangeTimeOffset;
+                         
 }
 
 /** Destructor */
@@ -194,7 +199,7 @@ bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
 
   // rangeTime is the round-tripping time to target
   double rangeDistance = (interpSensorPos-inputPt).magnitude();
-  rangeTime = 2*rangeDistance/C;
+  rangeTime = theRangeTimeOffset + 2*rangeDistance/C;
 
   return true;
 }
@@ -210,11 +215,11 @@ void ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, Ti
     // Handle grd case here
     double slantRange;
     groundRangeToSlantRange(imPt.x*theRangeResolution,azimuthTime, slantRange);
-    rangeTime = 2*slantRange/C;
+    rangeTime = theRangeTimeOffset + 2*slantRange/C;
     }
   else
     {
-    rangeTime = theNearRangeTime + imPt.x*(1/theRangeSamplingRate);
+    rangeTime = theRangeTimeOffset + theNearRangeTime + imPt.x*(1/theRangeSamplingRate);
     }
 }
   
@@ -473,9 +478,10 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
 
   // Compute interpolated time offset wrt record1
   DurationType td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(interp * deltat+0.5)));
-
+  DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
+  
   // Compute interpolated azimuth time
-  interpAzimuthTime = record1->azimuthTime+td;
+  interpAzimuthTime = record1->azimuthTime + td + offset;
   
   // Interpolate sensor position and velocity
   interpolateSensorPosVel(interpAzimuthTime,interpSensorPos, interpSensorVel);
@@ -585,9 +591,9 @@ void ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
   double timeSinceStartInMicroSeconds = (line - currentBurst->startLine)*theAzimuthTimeInterval;
   
   DurationType timeSinceStart = boost::posix_time::microseconds(timeSinceStartInMicroSeconds);
-  
+  DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
   // Eq 22 p 27
-  azimuthTime = currentBurst->azimuthStartTime + timeSinceStart;
+  azimuthTime = currentBurst->azimuthStartTime + timeSinceStart + offset;
 }
 
 
@@ -850,5 +856,56 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
   theGCPRecords = gcpRecordSave;
   
   return success;
+}
+
+void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
+{
+
+  double cumulRangeTime(0), cumulAzimuthTime(0);
+  unsigned int count=0;
+
+  // First, fix the azimuth time
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt)
+    {
+    ossimDpt estimatedImPt;
+    TimeType estimatedAzimuthTime;
+    double   estimatedRangeTime;
+    
+    bool thisSuccess = true;
+    
+    // Estimate times
+    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    
+    if(s1)
+      {
+      cumulAzimuthTime+=-(estimatedAzimuthTime-gcpIt->azimuthTime).total_microseconds();
+      ++count;
+      }
+    }
+
+  theAzimuthTimeOffset= cumulAzimuthTime/=count;
+
+  // Then, fix the range time  
+  count=0;
+
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt)
+    {
+    ossimDpt estimatedImPt;
+    TimeType estimatedAzimuthTime;
+    double   estimatedRangeTime;
+    
+    bool thisSuccess = true;
+    
+    // Estimate times
+    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    
+    if(s1)
+      {
+      cumulRangeTime+=-estimatedRangeTime+gcpIt->slantRangeTime;
+      ++count;
+      }
+    }
+  
+  theRangeTimeOffset = cumulRangeTime/=count;
 }
 }

@@ -21,7 +21,9 @@ ossimTerraSarXSarSensorModel::ossimTerraSarXSarSensorModel()
 
 ossimTerraSarXSarSensorModel::ossimTerraSarXSarSensorModel(const ossimTerraSarXSarSensorModel& m)
   : ossimSarSensorModel(m)
-{}
+{
+
+}
 
 /** Destructor */
 ossimTerraSarXSarSensorModel::~ossimTerraSarXSarSensorModel()
@@ -177,6 +179,8 @@ ossimTerraSarXSarSensorModel::~ossimTerraSarXSarSensorModel()
 
       theGCPRecords.push_back(gcpRecord);
     }
+
+  this->optimizeTimeOffsetsFromGcps();
 }
 
 } // namespace ossimplugins

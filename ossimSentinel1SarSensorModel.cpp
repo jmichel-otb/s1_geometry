@@ -320,6 +320,8 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     theGCPRecords.push_back(gcpRecord);
     }
 
+  this->optimizeTimeOffsetsFromGcps();
+  
 }
 
 } // namespace ossimplugins

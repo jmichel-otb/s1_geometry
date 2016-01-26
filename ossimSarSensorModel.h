@@ -119,6 +119,8 @@ public:
   //Pure virtual in base class
   bool useForward() const;
 
+  void optimizeTimeOffsetsFromGcps();
+  
   /** 
    * Returns pointer to a new instance, copy of this.
    * Not implemented yet!  Returns NULL...
@@ -229,6 +231,10 @@ protected:
 
   bool   isGRD; // True if the product is GRD. False if it is SLC
 
+  double theAzimuthTimeOffset; // Offset in microseconds
+
+  double theRangeTimeOffset; // Offset in seconds;
+  
   const double C = 299792458;
 
 };
