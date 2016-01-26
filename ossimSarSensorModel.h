@@ -114,7 +114,7 @@ public:
   bool autovalidateInverseModelFromGCPs(const double & xtol = 1, const double & ytol = 1, const double azTimeTol = 500, const double &rangeTimeTo=0.0000000001) const;
 
   // TODO: document me
-  bool autovalidateForwardModelFromGCPs(const double & resTol = 15) const;
+  bool autovalidateForwardModelFromGCPs(const double & resTol = 10);
   
   //Pure virtual in base class
   bool useForward() const;
@@ -202,7 +202,7 @@ protected:
   virtual void lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
 
   // TODO: document me
-  virtual bool projToSurface(const ossimEcefPoint& initPt, const TimeType & azimuthTime, const double & rangeTime, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
+  virtual bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
 
   std::vector<OrbitRecordType> theOrbitRecords;
 
