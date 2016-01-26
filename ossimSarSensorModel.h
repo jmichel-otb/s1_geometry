@@ -108,17 +108,19 @@ public:
   virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
 
   // TODO: document me
-  virtual bool lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
+  virtual void lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
 
   // TODO: document me
   bool autovalidateInverseModelFromGCPs(const double & xtol = 1, const double & ytol = 1, const double azTimeTol = 500, const double &rangeTimeTo=0.0000000001) const;
 
   // TODO: document me
-  bool autovalidateForwardModelFromGCPs(const double & resTol = 5) const;
+  bool autovalidateForwardModelFromGCPs(const double & resTol = 10);
   
   //Pure virtual in base class
   bool useForward() const;
 
+  void optimizeTimeOffsetsFromGcps();
+  
   /** 
    * Returns pointer to a new instance, copy of this.
    * Not implemented yet!  Returns NULL...
@@ -199,10 +201,10 @@ protected:
   virtual void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
   
   // TODO: document me
-  virtual bool lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
+  virtual void lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
 
   // TODO: document me
-  virtual bool projToSurface(const ossimEcefPoint& initPt, const TimeType & azimuthTime, const double & rangeTime, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
+  virtual bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
 
   std::vector<OrbitRecordType> theOrbitRecords;
 
@@ -229,6 +231,10 @@ protected:
 
   bool   isGRD; // True if the product is GRD. False if it is SLC
 
+  double theAzimuthTimeOffset; // Offset in microseconds
+
+  double theRangeTimeOffset; // Offset in seconds;
+  
   const double C = 299792458;
 
 };

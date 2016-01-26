@@ -68,7 +68,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     orbitRecord.position[2] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
 
     // Retrieve ECEF velocity
-     ossimEcefVector vel;
+    ossimEcefVector vel;
     att1 = "velocity";
     att2 = "x";
     orbitRecord.velocity[0] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
@@ -167,11 +167,11 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
             {
             end_found = true;
             }
-            else
+          else
             {
             ++last_valid;
+            }
           }
-         }
         }
 
       burstRecord.startLine = burstId*linesPerBurst + first_valid;
@@ -182,7 +182,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
       
       theBurstRecords.push_back(burstRecord);
       }
-   }
+    }
 
   if(isGRD)
     {
@@ -276,39 +276,39 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
       unsigned long acqStartLine(0);
     
       for(std::vector<BurstRecordType>::reverse_iterator bIt = theBurstRecords.rbegin();bIt!=theBurstRecords.rend() && !burstFound;++bIt)
-      {
-      if(gcpRecord.azimuthTime >= bIt->azimuthStartTime && gcpRecord.azimuthTime < bIt->azimuthStopTime)
         {
-        burstFound = true;
-        acqStart = bIt->azimuthStartTime;
-        acqStartLine = bIt->startLine;        
+        if(gcpRecord.azimuthTime >= bIt->azimuthStartTime && gcpRecord.azimuthTime < bIt->azimuthStopTime)
+          {
+          burstFound = true;
+          acqStart = bIt->azimuthStartTime;
+          acqStartLine = bIt->startLine;        
+          }
         }
-      }
 
-    if(!burstFound)
-      {
-      if(gcpRecord.azimuthTime < theBurstRecords.front().azimuthStartTime)
+      if(!burstFound)
         {
-        acqStart = theBurstRecords.front().azimuthStartTime;
-        acqStartLine = theBurstRecords.front().startLine;
-        } 
-      else if (gcpRecord.azimuthTime >=  theBurstRecords.front().azimuthStopTime)
-        {
-        acqStart = theBurstRecords.back().azimuthStartTime;
-        acqStartLine = theBurstRecords.back().startLine;
+        if(gcpRecord.azimuthTime < theBurstRecords.front().azimuthStartTime)
+          {
+          acqStart = theBurstRecords.front().azimuthStartTime;
+          acqStartLine = theBurstRecords.front().startLine;
+          } 
+        else if (gcpRecord.azimuthTime >=  theBurstRecords.front().azimuthStopTime)
+          {
+          acqStart = theBurstRecords.back().azimuthStartTime;
+          acqStartLine = theBurstRecords.back().startLine;
+          }
         }
-      }
-    boost::posix_time::time_duration timeSinceStart = (gcpRecord.azimuthTime-acqStart);
+      boost::posix_time::time_duration timeSinceStart = (gcpRecord.azimuthTime-acqStart);
       
-    double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
-    gcpRecord.imPt.y= timeSinceStartInMicroSeconds/theAzimuthTimeInterval + acqStartLine;
-    }
+      double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
+      gcpRecord.imPt.y= timeSinceStartInMicroSeconds/theAzimuthTimeInterval + acqStartLine;
+      }
     
     else
       {
       att1 = "line";
       gcpRecord.imPt.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
-       }
+      }
     ossimGpt geoPoint;
     att1 = "latitude";
     gcpRecord.worldPt.lat = (*itNode)->findFirstNode(att1)->getText().toDouble();
@@ -320,6 +320,8 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     theGCPRecords.push_back(gcpRecord);
     }
 
+  this->optimizeTimeOffsetsFromGcps();
+  
 }
 
 } // namespace ossimplugins

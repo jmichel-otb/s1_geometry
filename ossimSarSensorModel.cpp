@@ -27,7 +27,9 @@ ossimSarSensorModel::ossimSarSensorModel()
     theRangeSamplingRate(0.),
     theRangeResolution(0.),
     theBistaticCorrectionNeeded(false),
-    isGRD(false)
+    isGRD(false),
+    theAzimuthTimeOffset(0),
+    theRangeTimeOffset(0)
 {}
   
 
@@ -46,6 +48,9 @@ ossimSarSensorModel::ossimSarSensorModel(const ossimSarSensorModel& m)
   this->theRangeResolution = m.theRangeResolution;
   this->theBistaticCorrectionNeeded = m.theBistaticCorrectionNeeded;
   this->isGRD = m.isGRD;
+  this->theAzimuthTimeOffset = m.theAzimuthTimeOffset;
+  this->theRangeTimeOffset = m.theRangeTimeOffset;
+                         
 }
 
 /** Destructor */
@@ -55,19 +60,48 @@ ossimSarSensorModel::~ossimSarSensorModel()
 void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightAboveEllipsoid, ossimGpt& worldPt) const
 {
   assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
+
+  // Find the closest GCP
+  double distance = (imPt-theGCPRecords.front().imPt).length();  
   
-  // Not implemented yet
-  double rangeTime;
-  TimeType azimuthTime;
+  std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
 
-  bool success = lineSampleToAzimuthRangeTime(imPt,azimuthTime,rangeTime);
-
-  if(!success)
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
+      gcpIt!=theGCPRecords.end();++gcpIt)
     {
-    worldPt.makeNan();
-    return;
+    double currentDistance = (imPt-gcpIt->imPt).length();
+      
+    if(currentDistance < distance)
+      {
+      distance = currentDistance;
+      refGcp = gcpIt;
+      }
     }
 
+  // Set the height reference
+  ossim_float64 hgtSet;
+  if ( ossim::isnan(heightAboveEllipsoid) )
+    {
+    hgtSet = refGcp->worldPt.height();
+    }
+  else
+    {
+    hgtSet = heightAboveEllipsoid;
+    }
+  ossimHgtRef hgtRef(AT_HGT, hgtSet);
+  
+  ossimEcefPoint ellPt;
+  
+  // Simple iterative inversion of inverse model starting at closest gcp
+  projToSurface(*refGcp,imPt,&hgtRef,ellPt);
+  
+  worldPt = ossimGpt(ellPt);
+}
+
+void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
+{
+  assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
+  
   // Find the closest GCP
   double distance = (imPt-theGCPRecords.front().imPt).length();  
 
@@ -85,36 +119,14 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
 
   ossimGpt refPt = refGcp->worldPt;
 
-  // Set the height reference
-  ossim_float64 hgtSet;
-  if ( ossim::isnan(heightAboveEllipsoid) )
-    {
-    hgtSet = refPt.height();
-    }
-  else
-    {
-    hgtSet = heightAboveEllipsoid;
-    }
-  ossimHgtRef hgtRef(AT_HGT, hgtSet);
+  ossimHgtRef hgtRef(AT_DEM);
 
-  ossimEcefPoint sensorPos;
-  ossimEcefVector sensorVel;
-  
-  interpolateSensorPosVel(azimuthTime,sensorPos,sensorVel);
-  
-  //double range, doppler;
   ossimEcefPoint ellPt;
-  projToSurface(refPt,azimuthTime,rangeTime,&hgtRef,ellPt);
 
-  ossimGpt gpt(ellPt);
-
-  
+  // Simple iterative inversion of inverse model starting at closest gcp
+  projToSurface(*refGcp,imPt,&hgtRef,ellPt);
+ 
   worldPt = ossimGpt(ellPt);
-}
-
-void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
-{
-// Not implemented yet
 }
 
 void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & imPt) const
@@ -187,21 +199,15 @@ bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
 
   // rangeTime is the round-tripping time to target
   double rangeDistance = (interpSensorPos-inputPt).magnitude();
-  rangeTime = 2*rangeDistance/C;
+  rangeTime = theRangeTimeOffset + 2*rangeDistance/C;
 
   return true;
 }
 
-bool ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const
+void ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const
 {
   // First compute azimuth time here
-  bool success = lineToAzimuthTime(imPt.y,azimuthTime);
-
-  if(!success)
-    {
-    return false;
-    }
-  
+  lineToAzimuthTime(imPt.y,azimuthTime);  
   
   // Then compute range time
   if(isGRD)
@@ -209,14 +215,12 @@ bool ossimSarSensorModel::lineSampleToAzimuthRangeTime(const ossimDpt & imPt, Ti
     // Handle grd case here
     double slantRange;
     groundRangeToSlantRange(imPt.x*theRangeResolution,azimuthTime, slantRange);
-    rangeTime = 2*slantRange/C;
+    rangeTime = theRangeTimeOffset + 2*slantRange/C;
     }
   else
     {
-    rangeTime = theNearRangeTime + imPt.x*(1/theRangeSamplingRate);
+    rangeTime = theRangeTimeOffset + theNearRangeTime + imPt.x*(1/theRangeSamplingRate);
     }
-
-  return true;
 }
   
 void ossimSarSensorModel::computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const
@@ -474,9 +478,10 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
 
   // Compute interpolated time offset wrt record1
   DurationType td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(interp * deltat+0.5)));
-
+  DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
+  
   // Compute interpolated azimuth time
-  interpAzimuthTime = record1->azimuthTime+td;
+  interpAzimuthTime = record1->azimuthTime + td + offset;
   
   // Interpolate sensor position and velocity
   interpolateSensorPosVel(interpAzimuthTime,interpSensorPos, interpSensorVel);
@@ -543,7 +548,7 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
   line = (timeSinceStartInMicroSeconds/theAzimuthTimeInterval) + currentBurst->startLine;
 }
 
-bool ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azimuthTime) const
+void ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azimuthTime) const
 {
   assert(!theBurstRecords.empty()&&"Burst records are empty (at least one burst should be available)");
 
@@ -561,7 +566,6 @@ bool ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
     // records will be 1 (except for TOPSAR Sentinel1 products)
     for(std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin(); it!= theBurstRecords.end() && !burstFound; ++it)
       {
-    
       if(line >= it->startLine
          && line < it->endLine)
         {
@@ -569,135 +573,135 @@ bool ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
         currentBurst = it;
         }
       }
-    }
 
-  // If no burst is found, we will use the first (resp. last burst to
-  // extrapolate line
-  if(!burstFound)
-    {
-    return false;
+    if(!burstFound)
+      {
+      if(line < theBurstRecords.front().startLine)
+        {
+        currentBurst = theBurstRecords.begin();
+        } 
+      else if (line >= theBurstRecords.back().endLine)
+        {
+        currentBurst = theBurstRecords.end()-1;
+        }
+      }
+    
     }
 
   double timeSinceStartInMicroSeconds = (line - currentBurst->startLine)*theAzimuthTimeInterval;
   
   DurationType timeSinceStart = boost::posix_time::microseconds(timeSinceStartInMicroSeconds);
-
+  DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
   // Eq 22 p 27
-  azimuthTime = currentBurst->azimuthStartTime + timeSinceStart;
-
-  return true;
+  azimuthTime = currentBurst->azimuthStartTime + timeSinceStart + offset;
 }
 
 
 
-bool ossimSarSensorModel::projToSurface(const ossimEcefPoint& initPt, const TimeType & azimuthTime, const double & rangeTime, const ossimHgtRef * hgtRef, ossimEcefPoint & ellPt) const
-{ 
-  // Set slopes for tangent plane
-  ossim_float64 sx  = 0.0;
-  ossim_float64 sy  = 0.0;
+bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellPt) const
+{
+  // Initialize current estimation
+  ossimEcefPoint currentEstimation(initGcp.worldPt);
 
-  // Set tangent plane normal vector in ENU
-  ossimColumnVector3d tpn(sx, sy, 1.0);
-  ossimColumnVector3d tpnn(-sx, -sy, 1.0);
+  // Compute corresponding image position
+  ossimDpt currentImPoint(initGcp.imPt);
+
+  ossim_float64 currentImResidual = (target-currentImPoint).length();
+  double currentHeightResidual = initGcp.worldPt.height() - hgtRef->getRefHeight(initGcp.worldPt);
   
-  // Initialize at OP point
-   ossimEcefPoint rg(initPt);
+  bool init = true;
 
-   // Matrices
-   NEWMAT::SymmetricMatrix BtB(3);
-   NEWMAT::ColumnVector BtF(3);
-   NEWMAT::ColumnVector F(3);
-   NEWMAT::ColumnVector dR(3);
+  unsigned int iter = 0;
 
-   ossimEcefPoint sensorPos;
-   ossimEcefVector sensorVel;
+  NEWMAT::SymmetricMatrix BtB(3);
+  NEWMAT::ColumnVector BtF(3);
+  NEWMAT::ColumnVector F(3);
+  NEWMAT::ColumnVector dR(3);
 
-   interpolateSensorPosVel(azimuthTime,sensorPos,sensorVel);
+  // Stop condition: img residual < 1e-2 pixels, height residual <
+  // 0.01 m, nb iter < 50. init ensure that loop runs at least once.
+  while((init || (currentImResidual > 0.01 || std::abs(currentHeightResidual) > 0.01))  && iter < 50)
+    {
+    if(init)
+      init =false;  
 
-   double range = rangeTime * C/2;
+    // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<std::endl;
+    
+    // compute residuals
+    F(1) = target.x - currentImPoint.x;
+    F(2) = target.y - currentImPoint.y;
+    F(3) = currentHeightResidual;
+
+    // std::cout<<"F("<<iter<<")="<<F<<std::endl;
+    
+    // Delta use for partial derivatives estimation (in meters)
+    double d = 10.;
+
+    // Compute partial derivatives
+    ossimEcefVector p_fx, p_fy, p_fh,dx(d,0,0),dy(0,d,0),dz(0,0,d);
+    ossimDpt tmpImPt;
+    ossimGpt tmpGpt;
+    double tmpHgt;
+
+    ossim_float64 rdx,rdy,rdz, fdx,fdy,fdz;
+
+    ossimGpt currentEstimationWorld(currentEstimation);
+    tmpGpt = ossimGpt(currentEstimation+dx);
+    worldToLineSample(tmpGpt,tmpImPt);
+    p_fx[0] = (currentImPoint.x-tmpImPt.x)/d;
+    p_fy[0] = (currentImPoint.y-tmpImPt.y)/d;
+    p_fh[0] = (currentEstimationWorld.height()-tmpGpt.height())/d;
+
+    tmpGpt = ossimGpt(currentEstimation+dy);
+    worldToLineSample(tmpGpt,tmpImPt);
+    p_fx[1] = (currentImPoint.x-tmpImPt.x)/d;
+    p_fy[1] = (currentImPoint.y-tmpImPt.y)/d;
+    p_fh[1] = (currentEstimationWorld.height()-tmpGpt.height())/d;
+
+    tmpGpt = ossimGpt(currentEstimation+dz);
+    worldToLineSample(tmpGpt,tmpImPt);
+    p_fx[2] = (currentImPoint.x-tmpImPt.x)/d;
+    p_fy[2] = (currentImPoint.y-tmpImPt.y)/d;
+    p_fh[2] = (currentEstimationWorld.height()-tmpGpt.height())/d;
+
+    // Form B-matrix
+    NEWMAT::Matrix B = ossimMatrix3x3::create(p_fx[0], p_fx[1], p_fx[2],
+                                              p_fy[0], p_fy[1], p_fy[2],
+                                              p_fh[0], p_fh[1], p_fh[2]);
+
+    // std::cout<<"B: "<<B<<std::endl;
+    
+    // Invert system
+    dR = B.i() * F;
    
-   // Ensure we make at least one loop
-   bool init = true;
+    // Update estimate  
+    for (ossim_int32 k=0; k<3; k++)
+      {
+      currentEstimation[k] -= dR(k+1);
+      }
+
+    // std::cout<<"dR: "<<dR<<std::endl;
+    
+    currentEstimationWorld=ossimGpt(currentEstimation);
+
+    // Update residuals
+    ossim_float64 atHgt = hgtRef->getRefHeight(currentEstimationWorld);
+    currentHeightResidual = atHgt - currentEstimationWorld.height();
+    
+    ossimDpt newImPoint;
+    worldToLineSample(currentEstimationWorld,currentImPoint);
+
+    // std::cout<<currentImPoint<<std::endl;
    
-   ossim_int32 iter = 0;
-   // Implement simple Levenberg-Marquart algorithm
-   // Convergence thresholds:
-   // F(1) Thresh on range diff = 0.01 m
-   // F(2) Thresh on doppler diff = 0.001 Hz
-   // F(3) Thresh on elevation diff = 0.1 m
-   while ((init || abs(F(1))>=0.1 || abs(F(2))>=0.001 || abs(F(3))>=0.1) && iter<10)
-     {
-     if(init)
-       init =false;
-     
-     // Compute current latitude/longitude estimate
-     ossimGpt pg(rg);
-   
-     // Set reference point @ desired elevation
-     ossim_float64 atHgt = hgtRef->getRefHeight(pg);
-     pg.height(atHgt);
-     ossimEcefPoint rt(pg);
-      
-      // Define ENU space at reference point
-      ossimLsrSpace enu(pg);
-      
-      // Rotate normal vector to ECF
-      ossimEcefVector st = enu.lsrToEcefRotMatrix()*tpn;
-      
-      // Compute current range & Doppler estimate
-      ossim_float64 rngComp;
-      ossim_float64 dopComp;
-      computeRangeDoppler(rg, sensorPos, sensorVel, rngComp, dopComp);
-      
-      // Compute current height estimate
-      ossim_float64 diffHgt = st.dot(rg-rt);
-      
-      // Compute current fr, fd, ft
-      F(1) = rngComp-range;
-      F(2) = dopComp;
-      F(3) = diffHgt;
-      
-      // Delta use for partial derivatives estimation (in meters)
-      double d = 10.;
+    currentImResidual = (currentImPoint-target).length();
+    
+    iter++;
+    }
 
-      // Compute partial derivative
-      ossimEcefVector p_fr, p_fd, p_ft,dx(d,0,0),dy(0,d,0),dz(0,0,d);
-
-      ossim_float64 rdx,rdy,rdz, fdx,fdy,fdz;
-
-      computeRangeDoppler(rg+dx,sensorPos,sensorVel,rdx,fdx);
-      p_fr[0] = (rngComp - rdx)/d;
-      p_fd[0] = (dopComp - fdx)/d;
-      p_fr[0]= (st.dot(-dx))/d;
-
-      computeRangeDoppler(rg+dy,sensorPos,sensorVel,rdy,fdy);
-      p_fr[1] = (rngComp - rdy)/d;
-      p_fd[1] = (dopComp - fdy)/d;
-      p_ft[1] = (st.dot(-dy))/d;
-
-      computeRangeDoppler(rg+dz,sensorPos,sensorVel,rdz,fdz);
-      p_fr[2] = (rngComp - rdz)/d;
-      p_fd[2] = (dopComp - fdz)/d;
-      p_ft[2] = (st.dot(-dz))/d;
-      
-      // Form B-matrix
-      NEWMAT::Matrix B = ossimMatrix3x3::create(p_fr[0], p_fr[1], p_fr[2],
-                                                p_fd[0], p_fd[1], p_fd[2],
-                                                p_ft[0], p_ft[1], p_ft[2]);
-      
-      // Form coefficient matrix & discrepancy vector
-      BtF << B.t()*F;
-      BtB << B.t()*B;
-      // Solve system
-      dR = solveLeastSquares(BtB, BtF);
-      // Update estimate
-      for (ossim_int32 k=0; k<3; k++)
-         rg[k] += dR(k+1);
-      iter++;
-   }
-   // Set intersection for return
-   ellPt = rg;
-   return true;
+  // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<std::endl;
+  
+  ellPt = currentEstimation;
+  return true;
 }
 
 
@@ -788,14 +792,38 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 }
 
 
-bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol) const
+bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
 {
+
+  // First, split half of the gcps to serve as tests, and remove them
+  // temporarily from theGCPRecord.
+  std::vector<GCPRecordType> gcpRecordSave, testGcps,refGcps;
+
+  gcpRecordSave = theGCPRecords;
+  
+  unsigned int count = 0;
+  
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt,++count)
+    {
+    if(count%2 == 0)
+      {
+      refGcps.push_back(*gcpIt);
+      }
+    else
+      {
+      testGcps.push_back(*gcpIt);
+      }
+
+    }
+
+  theGCPRecords.swap(refGcps);
+  
   bool success = true;
   bool verbose = true;
   
   unsigned int gcpId = 1;
   
-  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt,++gcpId)
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = testGcps.begin(); gcpIt!=testGcps.end();++gcpIt,++gcpId)
     {
     ossimGpt estimatedWorldPt;
     ossimGpt refPt = gcpIt->worldPt;
@@ -808,8 +836,8 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
     lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
 
     double res = refPt.distanceTo(estimatedWorldPt);
-
-    if(res>resTol)
+    
+    if(res>resTol || estimatedWorldPt.hasNans())
       {
       success = false;
 
@@ -820,11 +848,64 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
         std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<std::endl;
         std::cout<<"Im point: "<<gcpIt->imPt<<std::endl;
         std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<res<<" m"<<std::endl;
-        std::cout<<std::endl;
+        std::cout<<std::endl;        
         }
       }
     }
 
+  theGCPRecords = gcpRecordSave;
+  
   return success;
+}
+
+void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
+{
+
+  double cumulRangeTime(0), cumulAzimuthTime(0);
+  unsigned int count=0;
+
+  // First, fix the azimuth time
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt)
+    {
+    ossimDpt estimatedImPt;
+    TimeType estimatedAzimuthTime;
+    double   estimatedRangeTime;
+    
+    bool thisSuccess = true;
+    
+    // Estimate times
+    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    
+    if(s1)
+      {
+      cumulAzimuthTime+=-(estimatedAzimuthTime-gcpIt->azimuthTime).total_microseconds();
+      ++count;
+      }
+    }
+
+  theAzimuthTimeOffset= cumulAzimuthTime/=count;
+
+  // Then, fix the range time  
+  count=0;
+
+  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt)
+    {
+    ossimDpt estimatedImPt;
+    TimeType estimatedAzimuthTime;
+    double   estimatedRangeTime;
+    
+    bool thisSuccess = true;
+    
+    // Estimate times
+    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    
+    if(s1)
+      {
+      cumulRangeTime+=-estimatedRangeTime+gcpIt->slantRangeTime;
+      ++count;
+      }
+    }
+  
+  theRangeTimeOffset = cumulRangeTime/=count;
 }
 }
