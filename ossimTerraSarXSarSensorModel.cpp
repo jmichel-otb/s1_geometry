@@ -140,7 +140,44 @@ ossimTerraSarXSarSensorModel::~ossimTerraSarXSarSensorModel()
   //GRD (detected product)
   if(isGRD)
     {
-    std::cerr << "Detected product not handle yet." << std::endl;  
+      //Retrieve Slant Range to Ground range coeddifcients
+     
+      CoordinateConversionRecordType coordRecord;
+      
+      //Get azimuth time start (again)
+      coordRecord.azimuthTime = azimuthTimeStart;
+
+      //Set ground range origin to 0 (FIXME?)
+      coordRecord.rg0 = 0.;
+
+      //Read  coefficients
+      xnodes.clear();  
+      
+      const unsigned int polynomialDegree = xmlDoc->getRoot()->findFirstNode("productSpecific/projectedImageInfo/slantToGroundRangeProjection/polynomialDegree")->getText().toUInt16();
+
+      std::cout << "Number of coefficients " << polynomialDegree << std::endl;
+
+      ossimString path = "/level1Product/productSpecific/projectedImageInfo/slantToGroundRangeProjection/coefficient";
+      const ossimString EXP = "exponent";
+      ossimString s;
+
+      xmlDoc->findNodes(path, xnodes);
+
+      if ( xnodes.size() )
+        {
+          for (unsigned int i = 0; i < xnodes.size(); ++i)
+            {
+              if (xnodes[i].valid())
+                {
+                  xnodes[i]->getAttributeValue(s, EXP);
+                  coordRecord.coefs.push_back(xnodes[i]->getText().toDouble());
+                  std::cout << "Coef number " << i << " value: " << xnodes[i]->getText().toDouble() << std::endl;
+                }
+            }
+        }
+      assert(!coordRecord.coefs.empty()&&"The srgr record has empty coefs vector.");
+
+      theSlantRangeToGroundRangeRecords.push_back(coordRecord);      
     }
 
   //Parse GCPs
