@@ -155,13 +155,14 @@ ossimTerraSarXSarSensorModel::~ossimTerraSarXSarSensorModel()
     {
       GCPRecordType gcpRecord;
     
-      // Retrieve acquisition time
+      // Get delta acquisition time
       ossimString att1 = "t";
       double deltaAzimuth = (*itNode)->findFirstNode(att1)->getText().toDouble();
       gcpRecord.azimuthTime = azimuthTimeStart + boost::posix_time::microseconds(deltaAzimuth * 1000000);
 
+      //Get delta range time
       att1 = "tau";
-      gcpRecord.slantRangeTime = (*itNode)->findFirstNode(att1)->getText().toDouble();
+      gcpRecord.slantRangeTime = theNearRangeTime + (*itNode)->findFirstNode(att1)->getText().toDouble();
     
       att1 = "col";
       gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
