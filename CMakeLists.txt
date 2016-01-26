@@ -49,14 +49,20 @@ foreach(entry ${s1_files})
   add_test( s1_forward_${name} ossimSentinel1SarSensorModelTest 0 ${entry})
 endforeach()
 
-#TSX tests
-# file(GLOB tsx_files ${CMAKE_SOURCE_DIR}/data/tsx/*.xml)
+# #TSX tests
+# file(GLOB tsx_files ${CMAKE_SOURCE_DIR}/data/tsx/*)
 # #Loop over all S1 annotation files
 # foreach(entry ${tsx_files})
+#   file(GLOB tsx_files ${CMAKE_SOURCE_DIR}/data/tsx/*)
 #   get_filename_component(name ${entry} NAME_WE)
 #   add_test( tsx_inverse_${name} ossimTerraSarXSarSensorModelTest ${entry} )
+#    add_test( tsx_forward_${name} ossimSentinel1SarSensorModelTest 0 ${entry})
 # endforeach()
 
-add_test( tsx_inverse_PANGKALANBUUN ossimTerraSarXSarSensorModelTest 1 ${CMAKE_SOURCE_DIR}/data/tsx/TSX1_SAR__SSC______SM_D_SRA_20080313T221955_20080313T222003.xml ${CMAKE_SOURCE_DIR}/data/tsx/GEOREF.xml)
+add_test( tsx_inverse_PANGKALANBUUN ossimTerraSarXSarSensorModelTest 1 ${CMAKE_SOURCE_DIR}/data/tsx/PANGKALANBUUN/TSX1_SAR__SSC______SM_D_SRA_20080313T221955_20080313T222003.xml ${CMAKE_SOURCE_DIR}/data/tsx/PANGKALANBUUN/GEOREF.xml)
 
-add_test( tsx_forward_PANGKALANBUUN ossimTerraSarXSarSensorModelTest 0 ${CMAKE_SOURCE_DIR}/data/tsx/TSX1_SAR__SSC______SM_D_SRA_20080313T221955_20080313T222003.xml ${CMAKE_SOURCE_DIR}/data/tsx/GEOREF.xml)
+add_test( tsx_forward_PANGKALANBUUN ossimTerraSarXSarSensorModelTest 0 ${CMAKE_SOURCE_DIR}/data/tsx/PANGKALANBUUN/TSX1_SAR__SSC______SM_D_SRA_20080313T221955_20080313T222003.xml ${CMAKE_SOURCE_DIR}/data/tsx/PANGKALANBUUN/GEOREF.xml)
+
+add_test( tsx_inverse_UPSALA ossimTerraSarXSarSensorModelTest 1 ${CMAKE_SOURCE_DIR}/data/tsx/UPSALA_GLACIER/TSX1_SAR__MGD.xml ${CMAKE_SOURCE_DIR}/data/tsx/UPSALA_GLACIER/GEOREF.xml)
+
+add_test( tsx_forward_UPSALA ossimTerraSarXSarSensorModelTest 0 ${CMAKE_SOURCE_DIR}/data/tsx/UPSALA_GLACIER/TSX1_SAR__MGD.xml ${CMAKE_SOURCE_DIR}/data/tsx/UPSALA_GLACIER/GEOREF.xml)
