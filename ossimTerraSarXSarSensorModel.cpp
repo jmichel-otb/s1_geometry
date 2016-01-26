@@ -202,10 +202,10 @@ ossimTerraSarXSarSensorModel::~ossimTerraSarXSarSensorModel()
       gcpRecord.slantRangeTime = theNearRangeTime + (*itNode)->findFirstNode(att1)->getText().toDouble();
     
       att1 = "col";
-      gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
+      gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble() - 1.;
     
       att1 = "row";
-      gcpRecord.imPt.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
+      gcpRecord.imPt.y = (*itNode)->findFirstNode(att1)->getText().toDouble() - 1.;
       
       ossimGpt geoPoint;
       att1 = "lat";
