@@ -26,7 +26,7 @@
 #include <ossim/elevation/ossimHgtRef.h>
 #endif
 
-#include "boost/date_time/posix_time/posix_time.hpp"
+#include <boost/date_time/posix_time/posix_time.hpp>
 
 namespace ossimplugins
 {
@@ -40,8 +40,8 @@ public:
 
   struct OrbitRecordType
   {
-    TimeType azimuthTime;
-    ossimEcefPoint position;
+    TimeType        azimuthTime;
+    ossimEcefPoint  position;
     ossimEcefVector velocity;
   };
 
@@ -55,16 +55,16 @@ public:
 
   struct BurstRecordType
   {
-    TimeType azimuthStartTime;
+    TimeType      azimuthStartTime;
     unsigned long startLine;
-    TimeType azimuthStopTime;
+    TimeType      azimuthStopTime;
     unsigned long endLine;
   };
 
   struct CoordinateConversionRecordType
   {
-    TimeType azimuthTime;
-    double rg0;
+    TimeType            azimuthTime;
+    double              rg0;
     std::vector<double> coefs;
   };
   
@@ -205,37 +205,39 @@ protected:
   // TODO: document me
   virtual bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
 
-  std::vector<OrbitRecordType> theOrbitRecords;
+  std::vector<OrbitRecordType>                theOrbitRecords;
 
-  std::vector<GCPRecordType>   theGCPRecords;
+  std::vector<GCPRecordType>                  theGCPRecords;
 
-  std::vector<BurstRecordType> theBurstRecords;
+  std::vector<BurstRecordType>                theBurstRecords;
 
   std::vector<CoordinateConversionRecordType> theSlantRangeToGroundRangeRecords;
 
   std::vector<CoordinateConversionRecordType> theGroundRangeToSlantRangeRecords;
 
-  double theRadarFrequency; // in Hz
+  double                                      theRadarFrequency; // in Hz
 
-  double theAzimuthTimeInterval; // in microseconds
+  double                                      theAzimuthTimeInterval; // in microseconds
 
-  double theNearRangeTime; // in seconds
+  double                                      theNearRangeTime; // in seconds
 
-  double theRangeSamplingRate; // in Hz
+  double                                      theRangeSamplingRate; // in Hz
 
-  double theRangeResolution; // in meters
+  double                                      theRangeResolution; // in meters
 
-  bool   theBistaticCorrectionNeeded; // Do we need to compute
-                                      // bistatic correction ?
+  bool                                        theBistaticCorrectionNeeded; // Do we need to compute
+                                                                           // bistatic correction ?
 
-  bool   isGRD; // True if the product is GRD. False if it is SLC
+  bool                                        isGRD; // True if the product is GRD. False if it is SLC
 
-  double theAzimuthTimeOffset; // Offset in microseconds
+  double                                      theAzimuthTimeOffset; // Offset in microseconds
 
-  double theRangeTimeOffset; // Offset in seconds;
+  double                                      theRangeTimeOffset; // Offset in seconds;
   
   static const double C = 299792458;
-
+private:
+  /** Disabled assignment operator.  */
+  ossimSarSensorModel& operator=(ossimSarSensorModel const& rhs);
 };
 
 }
