@@ -12,6 +12,8 @@
 #ifndef ossimSarSensorModel_HEADER
 #define ossimSarSensorModel_HEADER
 
+#include <boost/config.hpp>
+
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wunused-parameter"
@@ -67,23 +69,27 @@ public:
     double              rg0;
     std::vector<double> coefs;
   };
-  
+
   /** Constructor */
   ossimSarSensorModel();
-  
+
+#if ! (defined(BOOST_NO_DEFAULTED_FUNCTIONS) || defined(BOOST_NO_CXX1_DEFAULTED_FUNCTIONS))
   /** Copy constructor */
-  ossimSarSensorModel(const ossimSarSensorModel& m);
+  ossimSarSensorModel(ossimSarSensorModel const& m) = default;
+  /** Move constructor */
+  ossimSarSensorModel(ossimSarSensorModel && m) = default;
 
   /** Destructor */
-  virtual ~ossimSarSensorModel();
+  virtual ~ossimSarSensorModel() = default;
+#endif
 
   /** Not yet implemented */
   virtual void lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const;
 
-  /** Not yet implemented */ 
+  /** Not yet implemented */
   virtual void lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const;
 
-  
+
   /** This method implement inverse sar geolocation using method found
    *  in ESA document "Guide to ASAR geocoding" (ref
    *  RSL-ASAR-GC-AD). Equation numbers can be found in source code
@@ -97,7 +103,7 @@ public:
   /**
    * Sub-routine of lineSampleToWorld that computes azimuthTime and
    * slant range time from worldPoint
-   * 
+   *
    * \param[in] worldPoint World point to geocode
    * \param[out] azimuthTime Estimated zero-doppler azimuth time
    * \param[out] rangeTime Estimated range time
@@ -114,16 +120,16 @@ public:
 
   // TODO: document me
   bool autovalidateForwardModelFromGCPs(const double & resTol = 10);
-  
+
   //Pure virtual in base class
   bool useForward() const;
 
   void optimizeTimeOffsetsFromGcps();
-  
-  /** 
+
+  /**
    * Returns pointer to a new instance, copy of this.
    * Not implemented yet!  Returns NULL...
-   * 
+   *
    */
   ossimObject* dup() const;
 
@@ -134,7 +140,7 @@ protected:
   /**
    * Compute range and doppler frequency from an input point, sensor
    * position and velocity.
-   * 
+   *
    * \param[in] inputPt The target point
    * \param[in] sensorPos The sensor position
    * \param[in] sensorvel The sensor velocity
@@ -143,10 +149,10 @@ protected:
    */
   virtual void computeRangeDoppler(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, const ossimEcefVector sensorVel, double & range, double & doppler) const;
 
-  /** 
+  /**
    * Interpolate sensor position and velocity at given azimuth time
    * using lagragian interpolation of orbital records.
-   * 
+   *
    * \param[in] azimuthTime The time at which to interpolate
    * \param[out] sensorPos Interpolated sensor position
    * \param[out] sensorvel Interpolated sensor velocity
@@ -157,11 +163,11 @@ protected:
   /**
    * Convert slant range to ground range by interpolating slant range
    * to ground range coefficients.
-   * 
+   *
    * \param[in] slantRangeTime The slantRange to convert (meters)
-   * \param[in] azimuthTime The corresponding azimuth time 
+   * \param[in] azimuthTime The corresponding azimuth time
    * \param[out] groundRange The estimated ground range (meters)
-   */ 
+   */
   virtual void slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const;
 
   // TODO: Document me
@@ -172,7 +178,7 @@ protected:
   /**
    * Estimate the zero-doppler azimuth time and corresponding sensor
    * position and velocity from the inputPt.
-   * 
+   *
    * \param[in] inputPt The point to estimated zero-doppler time on
    * \param[out] interpAzimuthTime Interpolated azimuth time
    * \param[out] interpSensorPos Interpolated sensor position
@@ -184,7 +190,7 @@ protected:
 
   /**
    * Compute the bistatic correction to apply.
-   * 
+   *
    * \param[in] inputPt The point to compute bistatic correction on
    * \param[in] sensorPos The corresponding sensor position
    * \param[out] bistaticCorrection The estimated bistatic correction
@@ -193,12 +199,12 @@ protected:
 
   /**
    * Convert azimuth time to fractional line.
-   * 
+   *
    * \param[in] azimuthTime The azimuth time to convert
-   * \param[out] The estimated fractional line 
+   * \param[out] The estimated fractional line
    */
   virtual void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
-  
+
   // TODO: document me
   virtual void lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
 
@@ -233,7 +239,7 @@ protected:
   double                                      theAzimuthTimeOffset; // Offset in microseconds
 
   double                                      theRangeTimeOffset; // Offset in seconds;
-  
+
   static const double C = 299792458;
 private:
   /** Disabled assignment operator.  */
