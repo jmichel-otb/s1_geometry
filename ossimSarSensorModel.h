@@ -235,7 +235,7 @@ protected:
 
   double theRangeTimeOffset; // Offset in seconds;
   
-  const double C = 299792458;
+  static const double C = 299792458;
 
 };
 

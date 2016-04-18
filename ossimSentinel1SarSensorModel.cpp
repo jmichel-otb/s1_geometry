@@ -17,7 +17,7 @@ namespace ossimplugins
 
 ossimSentinel1SarSensorModel::ossimSentinel1SarSensorModel()
 {}
-  
+
 
 ossimSentinel1SarSensorModel::ossimSentinel1SarSensorModel(const ossimSentinel1SarSensorModel& m)
   : ossimSarSensorModel(m)
@@ -37,7 +37,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   std::string mode = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
   std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
   std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
-  
+
   isGRD = (product_type == "GRD");
 
   // First, lookup position/velocity records
@@ -57,7 +57,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     s = (*itNode)->findFirstNode(att1)->getText();
     s = s.replaceAllThatMatch("T"," ");
     orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
-   
+
     // Retrieve ECEF position
     att1 = "position";
     ossimString att2 = "x";
@@ -90,36 +90,36 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
   //Parse the range resolution
   theRangeResolution = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
 
-  //Parse the radar frequency 
+  //Parse the radar frequency
   theRadarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
 
   //Parse azimuth time interval
   theAzimuthTimeInterval = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
 
-  
+
   // Now read burst records as well
-  xnodes.clear();  
+  xnodes.clear();
   xmlDoc->findNodes("/product/swathTiming/burstList/burst",xnodes);
 
   if(xnodes.empty())
-    {  
+    {
     BurstRecordType burstRecord;
 
     burstRecord.startLine = 0;
-    
+
     ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
 
     s = s.replaceAllThatMatch("T"," ");
-    
+
     burstRecord.azimuthStartTime = boost::posix_time::time_from_string(s);
 
     std::cout<< burstRecord.azimuthStartTime<<std::endl;
 
     s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
     s = s.replaceAllThatMatch("T"," ");
-    
+
     burstRecord.azimuthStopTime = boost::posix_time::time_from_string(s);
-  
+
     burstRecord.endLine = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16()-1;
 
     theBurstRecords.push_back(burstRecord);
@@ -128,9 +128,9 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     {
     unsigned int linesPerBurst = xmlDoc->getRoot()->findFirstNode("swathTiming/linesPerBurst")->getText().toUInt16();
     unsigned int burstId(0);
-    
+
     for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode,++burstId)
-      { 
+      {
       BurstRecordType burstRecord;
 
       ossimString att1 = "azimuthTime";
@@ -144,10 +144,13 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
       long first_valid(0), last_valid(0);
       bool begin_found(false), end_found(false);
-      
+
       std::vector<ossimString> ssp = s.split(" ");
 
-      for(auto sIt = ssp.begin(); sIt != ssp.end() && !end_found;++sIt)
+      for (std::vector<ossimString>::const_iterator sIt = ssp.begin(), e = ssp.end()
+              ; sIt != e && !end_found
+              ; ++sIt
+          )
         {
         if(!begin_found)
           {
@@ -176,29 +179,29 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
       burstRecord.startLine = burstId*linesPerBurst + first_valid;
       burstRecord.endLine = burstId*linesPerBurst + last_valid;
-      
+
       burstRecord.azimuthStartTime = azTime + boost::posix_time::microseconds(first_valid*theAzimuthTimeInterval);
       burstRecord.azimuthStopTime = azTime + boost::posix_time::microseconds(last_valid*theAzimuthTimeInterval);
-      
+
       theBurstRecords.push_back(burstRecord);
       }
     }
 
   if(isGRD)
     {
-    xnodes.clear();  
+    xnodes.clear();
     xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
 
     for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
       {
       CoordinateConversionRecordType coordRecord;
-      
+
       ossimString att1 = "azimuthTime";
       ossimString s;
       s = (*itNode)->findFirstNode(att1)->getText();
       s = s.replaceAllThatMatch("T"," ");
       coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
-    
+
       att1 = "sr0";
       coordRecord.rg0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
@@ -206,28 +209,31 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
       s = (*itNode)->findFirstNode(att1)->getText();
       std::vector<ossimString> ssplit = s.split(" ");
 
-      for(auto cIt = ssplit.begin();cIt !=ssplit.end();++cIt)
+      for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
+              ; cIt != e
+              ; ++cIt
+          )
         {
         coordRecord.coefs.push_back(cIt->toDouble());
         }
       assert(!coordRecord.coefs.empty()&&"The srgr record has empty coefs vector.");
 
-      theSlantRangeToGroundRangeRecords.push_back(coordRecord);      
+      theSlantRangeToGroundRangeRecords.push_back(coordRecord);
       }
-    
-    xnodes.clear();  
+
+    xnodes.clear();
     xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
 
     for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
       {
       CoordinateConversionRecordType coordRecord;
-      
+
       ossimString att1 = "azimuthTime";
       ossimString s;
       s = (*itNode)->findFirstNode(att1)->getText();
       s = s.replaceAllThatMatch("T"," ");
       coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
-    
+
       att1 = "gr0";
       coordRecord.rg0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
@@ -235,23 +241,26 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
       s = (*itNode)->findFirstNode(att1)->getText();
       std::vector<ossimString> ssplit = s.split(" ");
 
-      for(auto cIt = ssplit.begin();cIt !=ssplit.end();++cIt)
+      for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
+              ; cIt != e
+              ; ++cIt
+          )
         {
         coordRecord.coefs.push_back(cIt->toDouble());
         }
       assert(!coordRecord.coefs.empty()&&"The grsr record has empty coefs vector.");
 
-      theGroundRangeToSlantRangeRecords.push_back(coordRecord);      
+      theGroundRangeToSlantRangeRecords.push_back(coordRecord);
       }
     }
-  
+
   xnodes.clear();
   xmlDoc->findNodes("/product/geolocationGrid/geolocationGridPointList/geolocationGridPoint",xnodes);
 
   for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
     {
     GCPRecordType gcpRecord;
-    
+
     // Retrieve acquisition time
     ossimString att1 = "azimuthTime";
     ossimString s;
@@ -261,7 +270,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
     att1 = "slantRangeTime";
     gcpRecord.slantRangeTime = (*itNode)->findFirstNode(att1)->getText().toDouble();
-    
+
     att1 = "pixel";
     gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
@@ -274,14 +283,14 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
       ossimSarSensorModel::TimeType acqStart;
       bool burstFound(false);
       unsigned long acqStartLine(0);
-    
+
       for(std::vector<BurstRecordType>::reverse_iterator bIt = theBurstRecords.rbegin();bIt!=theBurstRecords.rend() && !burstFound;++bIt)
         {
         if(gcpRecord.azimuthTime >= bIt->azimuthStartTime && gcpRecord.azimuthTime < bIt->azimuthStopTime)
           {
           burstFound = true;
           acqStart = bIt->azimuthStartTime;
-          acqStartLine = bIt->startLine;        
+          acqStartLine = bIt->startLine;
           }
         }
 
@@ -291,7 +300,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
           {
           acqStart = theBurstRecords.front().azimuthStartTime;
           acqStartLine = theBurstRecords.front().startLine;
-          } 
+          }
         else if (gcpRecord.azimuthTime >=  theBurstRecords.front().azimuthStopTime)
           {
           acqStart = theBurstRecords.back().azimuthStartTime;
@@ -299,11 +308,11 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
           }
         }
       boost::posix_time::time_duration timeSinceStart = (gcpRecord.azimuthTime-acqStart);
-      
+
       double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
       gcpRecord.imPt.y= timeSinceStartInMicroSeconds/theAzimuthTimeInterval + acqStartLine;
       }
-    
+
     else
       {
       att1 = "line";
@@ -321,7 +330,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     }
 
   this->optimizeTimeOffsetsFromGcps();
-  
+
 }
 
 } // namespace ossimplugins
