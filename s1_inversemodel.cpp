@@ -229,7 +229,7 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
   const boost::posix_time::time_duration delta_td = boost::get<0>(*currentRecord) - boost::get<0>(*lastRecord);
   const double deltat = delta_td.total_microseconds();
 
-  //std::cout<<"Corresponding deltat: "<<deltat<<" µs"<<std::endl;
+  //std::cout<<"Corresponding deltat: "<<deltat<<" µs\n";
 
   const boost::posix_time::time_duration td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(interp * deltat+0.5)));
 
@@ -290,7 +290,7 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
 
     const double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
 
-    //std::cout<<"timeSinceStartInMicroSeconds: "<<timeSinceStartInMicroSeconds<<" µs"<<std::endl;
+    //std::cout<<"timeSinceStartInMicroSeconds: "<<timeSinceStartInMicroSeconds<<" µs\n";
 
     resp.y = timeSinceStartInMicroSeconds/azimythTimeIntervalInMicroSeconds;
     }
@@ -403,7 +403,7 @@ int main(int argc, char * argv[])
   std::vector<ossimRefPtr<ossimXmlNode> > xnodes;
   xmlDoc->findNodes("/product/generalAnnotation/orbitList/orbit",xnodes);
 
-  std::cout<<"Reading orbit records ..."<<std::endl;
+  std::cout<<"Reading orbit records ...\n";
   std::cout<<"Number of orbit records found: "<<xnodes.size()<<std::endl;
 
   for (std::vector<ossimRefPtr<ossimXmlNode> >::const_iterator itNode = xnodes.begin(), e = xnodes.end()
@@ -444,10 +444,10 @@ int main(int argc, char * argv[])
 
       records.push_back(make_tuple(acqTime,pos,vel));
   }
-  std::cout<<"done."<<std::endl<<std::endl;
+  std::cout<<"done.\n\n";
 
 
-  std::cout<<"Reading other useful values ..."<<std::endl;
+  std::cout<<"Reading other useful values ...\n";
   ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
   //ossimString s = xmlDoc->getRoot()->findFirstNode("generalAnnotation/downlinkInformationList/downlinkInformation/firstLineSensingTime")->getText();
   s = s.replaceAllThatMatch("T"," ");
@@ -466,48 +466,48 @@ int main(int argc, char * argv[])
   std::cout<<"Image size: "<<nbSamples<<" x "<<nbLines<<std::endl;
 
   nearRangeTime = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/slantRangeTime")->getText().toDouble();
-  std::cout<<"Near range time: "<<nearRangeTime<<" s"<<std::endl;
+  std::cout<<"Near range time: "<<nearRangeTime<<" s\n";
 
   const double nearRangeDistance = nearRangeTime * C /2;
 
-  std::cout<<"Near range distance: "<<nearRangeDistance<< "m"<<std::endl;
+  std::cout<<"Near range distance: "<<nearRangeDistance<< "m\n";
 
   rangeSamplingRate = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/rangeSamplingRate")->getText().toDouble();
   const double estimatedRangeRes = (1/rangeSamplingRate)*C/2;
-  std::cout<<"Range sampling rate: "<<rangeSamplingRate<<" Hz (estimated range res: "<<estimatedRangeRes<<" m)"<<std::endl;
+  std::cout<<"Range sampling rate: "<<rangeSamplingRate<<" Hz (estimated range res: "<<estimatedRangeRes<<" m)\n";
 
   const double rangeRes = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
-  std::cout<<"Range res from product: "<<rangeRes<<" m"<<std::endl;
+  std::cout<<"Range res from product: "<<rangeRes<<" m\n";
 
   const double radarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
-  std::cout<<"Radar frequency: "<<radarFrequency<<" Hz"<<std::endl;
+  std::cout<<"Radar frequency: "<<radarFrequency<<" Hz\n";
 
   const boost::posix_time::time_duration td = (acqStopTime - acqStartTime);
 
   const double acquisition_duration = td.total_microseconds();
 
-  std::cout<<"Acquisition duration: "<<boost::posix_time::to_simple_string(td)<<" ("<<acquisition_duration/1000000<<" s)"<<std::endl;
+  std::cout<<"Acquisition duration: "<<boost::posix_time::to_simple_string(td)<<" ("<<acquisition_duration/1000000<<" s)\n";
 
   const double estimatedAzimuthTimeIntervalInMicroSeconds = acquisition_duration/nbLines;
   const double prf = 1000000/estimatedAzimuthTimeIntervalInMicroSeconds;
 
   const double azimuthTimeIntervalInMicroSeconds = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
 
-  std::cout<<"Estimated prf: "<<prf<<" Hz ("<<estimatedAzimuthTimeIntervalInMicroSeconds/1000000<<" s)"<<std::endl;
-  std::cout<<"Azimuth time interval from product: "<<azimuthTimeIntervalInMicroSeconds/1000000<<" s"<<std::endl;
+  std::cout<<"Estimated prf: "<<prf<<" Hz ("<<estimatedAzimuthTimeIntervalInMicroSeconds/1000000<<" s)\n";
+  std::cout<<"Azimuth time interval from product: "<<azimuthTimeIntervalInMicroSeconds/1000000<<" s\n";
 
-  std::cout<<"Done."<<std::endl<<std::endl;
+  std::cout<<"Done.\n\n";
 
   // Now read burst records as well
   BurstRecordVectorType burstRecords;
 
-  std::cout<<"Reading burst records ..."<<std::endl;
+  std::cout<<"Reading burst records ...\n";
   xnodes.clear();
   xmlDoc->findNodes("/product/swathTiming/burstList/burst",xnodes);
 
   if(xnodes.empty())
     {
-        std::cout<<"No burst records found, skipping"<<std::endl;
+        std::cout<<"No burst records found, skipping\n";
     }
   else
     {
@@ -574,17 +574,17 @@ int main(int argc, char * argv[])
         const boost::posix_time::ptime burstLastValidTime = azTime + boost::posix_time::microseconds(last_valid*azimuthTimeIntervalInMicroSeconds);
 
         std::cout<<"Burst #"<<burstId<<std::endl;
-        std::cout<<"FirstValidSample: "<<burstFirstValidLine<<" ("<<burstFirstValidTime<<")"<<std::endl;
-        std::cout<<"LastValidSample: "<<burstLastValidLine<<" ("<<burstLastValidTime<<")"<<std::endl;
+        std::cout<<"FirstValidSample: "<<burstFirstValidLine<<" ("<<burstFirstValidTime<<")\n";
+        std::cout<<"LastValidSample: "<<burstLastValidLine<<" ("<<burstLastValidTime<<")\n";
 
         burstRecords.push_back(boost::make_tuple(burstFirstValidTime, burstFirstValidLine,burstLastValidTime,burstLastValidLine));
     }
    }
-  std::cout<<"Done."<<std::endl<<std::endl;
+  std::cout<<"Done.\n\n";
 
   if(isGrd)
     {
-    std::cout<<"Reading Slant range to Ground range coefficients ..."<<std::endl;
+    std::cout<<"Reading Slant range to Ground range coefficients ...\n";
 
     xnodes.clear();
     xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
@@ -620,11 +620,11 @@ int main(int argc, char * argv[])
         srgrRecords.push_back(boost::make_tuple(azTime,sr0,coefs));
     }
 
-    std::cout<<"Done."<<std::endl<<std::endl;
+    std::cout<<"Done.\n\n";
     }
 
 
-  std::cout<<"Reading ground control points ..."<<std::endl;
+  std::cout<<"Reading ground control points ...\n";
   GCPVectorType gcps;
   xnodes.clear();
   xmlDoc->findNodes("/product/geolocationGrid/geolocationGridPointList/geolocationGridPoint",xnodes);
@@ -703,7 +703,7 @@ int main(int argc, char * argv[])
 
     gcps.push_back(make_tuple(azTime,slantRangeTime,imPoint,geoPoint));
     }
-  std::cout<<"Done."<<std::endl<<std::endl;
+  std::cout<<"Done.\n\n";
 
   unsigned int count = 1;
 
@@ -717,7 +717,7 @@ int main(int argc, char * argv[])
 
       const ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeTime, rangeSamplingRate, rangeRes, records, burstRecords,srgrRecords,boost::get<3>(*itGcp),estimatedTime,estimatedSlantRangeTime);
 
-      std::cout<<"ProcessingGCP #"<<count<<":"<<std::endl;
+      std::cout<<"ProcessingGCP #"<<count<<":\n";
       std::cout<<"Position: "<<boost::get<2>(*itGcp)<<", estimated: "<<estimatedPos<<", residual: "<<estimatedPos-boost::get<2>(*itGcp)<<std::endl;
       std::cout<<"Azimuth time: "<<boost::posix_time::to_simple_string(boost::get<0>(*itGcp))<<", estimated: "<<boost::posix_time::to_simple_string(estimatedTime)<<", residual: "<<boost::posix_time::to_simple_string(estimatedTime-boost::get<0>(*itGcp))<<std::endl;
       std::cout<<"Slant range time: "<<boost::get<1>(*itGcp)<<", estimated: "<<estimatedSlantRangeTime<<", residual: "<<boost::get<1>(*itGcp)-estimatedSlantRangeTime<<std::endl;

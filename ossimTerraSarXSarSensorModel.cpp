@@ -56,7 +56,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
         orbitRecord.velocity[2] = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
         //Add one orbits record
-        std::cout << "Add theOrbitRecords" << std::endl;
+        std::cout << "Add theOrbitRecords\n";
         theOrbitRecords.push_back(orbitRecord);
     }
 
@@ -166,7 +166,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     xnodes.clear();
     xmlGeo->findNodes("/geoReference/geolocationGrid/gridPoint",xnodes);
 
-    std::cout<<"Found "<<xnodes.size()<<" GCPs"<<std::endl;
+    std::cout<<"Found "<<xnodes.size()<<" GCPs\n";
 
     for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
     {
