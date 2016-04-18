@@ -21,21 +21,24 @@ endif()
 # s1_inversemodel
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
-add_executable(s1_inversemodel s1_inversemodel.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
+add_executable(s1_inversemodel
+    s1_inversemodel.cpp ossimSarSensorModel.cpp
+    ossimSentinel1SarSensorModel.cpp xmlTools.cpp
+    )
 target_link_libraries(s1_inversemodel
     ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
 
 #Test executables
-add_executable(ossimSarSensorModelTest ossimSarSensorModelTest.cpp ossimSarSensorModel.cpp)
+add_executable(ossimSarSensorModelTest ossimSarSensorModelTest.cpp ossimSarSensorModel.cpp xmlTools.cpp)
 target_link_libraries(ossimSarSensorModelTest
     ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
-add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
+add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp xmlTools.cpp)
 target_link_libraries(ossimSentinel1SarSensorModelTest
     ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
-add_executable(ossimTerraSarXSarSensorModelTest ossimTerraSarXSarSensorModelTest.cpp ossimSarSensorModel.cpp ossimTerraSarXSarSensorModel.cpp)
+add_executable(ossimTerraSarXSarSensorModelTest ossimTerraSarXSarSensorModelTest.cpp ossimSarSensorModel.cpp ossimTerraSarXSarSensorModel.cpp xmlTools.cpp)
 target_link_libraries(ossimTerraSarXSarSensorModelTest
     ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 

@@ -11,6 +11,7 @@
 
 #include <ossimTerraSarXSarSensorModel.h>
 #include <ossim/base/ossimXmlDocument.h>
+#include "xmlTools.h"
 
 void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::string & annotationXml, const std::string & geoXml)
 {
@@ -35,9 +36,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
 
         // Retrieve acquisition time
         ossimString att1 = "timeUTC";
-        ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        std::replace(s.begin(), s.end(), 'T', ' ');
-        orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
+        orbitRecord.azimuthTime = getTimeFromFirstNode(**itNode, att1);
 
         // Retrieve ECEF position
         att1 = "posX";
@@ -83,15 +82,11 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     //Manage only strip map product for now (one burst)
 
     //Parse azimuth time start/stop
-    ossimString s1 = xmlDoc->getRoot()->findFirstNode("productInfo/sceneInfo/start/timeUTC")->getText();
-    std::replace(s1.begin(), s1.end(), 'T', ' ');
-    TimeType azimuthTimeStart = boost::posix_time::time_from_string(s1);
+    const TimeType azimuthTimeStart = getTimeFromFirstNode(*xmlDoc->getRoot(), "productInfo/sceneInfo/start/timeUTC");
 
     std::cout << "azimuthTimeStart " << azimuthTimeStart << std::endl;
 
-    ossimString s2 = xmlDoc->getRoot()->findFirstNode("productInfo/sceneInfo/stop/timeUTC")->getText();
-    std::replace(s2.begin(), s2.end(), 'T', ' ');
-    TimeType azimuthTimeStop = boost::posix_time::time_from_string(s2);
+    const TimeType azimuthTimeStop = getTimeFromFirstNode(*xmlDoc->getRoot(), "productInfo/sceneInfo/stop/timeUTC");
 
     std::cout << "azimuthTimeStop " << azimuthTimeStop << std::endl;
 

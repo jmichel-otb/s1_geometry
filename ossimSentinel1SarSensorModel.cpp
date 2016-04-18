@@ -11,6 +11,28 @@
 
 #include <ossimSentinel1SarSensorModel.h>
 #include <ossim/base/ossimXmlDocument.h>
+#include "xmlTools.h"
+
+namespace {// Anonymous namespace
+    const ossimString attAzimuthTime      = "azimuthTime";
+    const ossimString attFirstValidSample = "firstValidSample";
+    const ossimString attGr0              = "gr0";
+    const ossimString attGrsrCoefficients = "grsrCoefficients";
+    const ossimString attHeight           = "height";
+    const ossimString attLatitude         = "latitude";
+    const ossimString attLine             = "line";
+    const ossimString attLongitude        = "longitude";
+    const ossimString attPixel            = "pixel";
+    const ossimString attPosition         = "position";
+    const ossimString attSlantRangeTime   = "slantRangeTime";
+    const ossimString attSr0              = "sr0";
+    const ossimString attSrgrCoefficients = "srgrCoefficients";
+    const ossimString attTime             = "time";
+    const ossimString attVelocity         = "velocity";
+    const ossimString attX                = "x";
+    const ossimString attY                = "y";
+    const ossimString attZ                = "z";
+}// Anonymous namespace
 
 namespace ossimplugins
 {
@@ -22,8 +44,8 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     //Parse specific metadata for Sentinel1
     //TODO add as members to the Sentinel1SarSensorModel
     const std::string product_type = xmlDoc->getRoot()->findFirstNode("adsHeader/productType")->getText();
-    const std::string mode = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
-    const std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
+    const std::string mode         = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
+    const std::string swath        = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
     const std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
 
     isGRD = (product_type == "GRD");
@@ -40,47 +62,38 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         OrbitRecordType orbitRecord;
 
         // Retrieve acquisition time
-        ossimString att1 = "time";
-        ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        std::replace(s.begin(), s.end(), 'T', ' ');
-        orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
+        orbitRecord.azimuthTime = getTimeFromFirstNode(**itNode, attTime);
 
         // Retrieve ECEF position
-        att1 = "position";
-        ossimString att2 = "x";
-        orbitRecord.position[0] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
-        att2 = "y";
-        orbitRecord.position[1] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
-        att2 = "z";
-        orbitRecord.position[2] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
+        ossimXmlNode const& positionNode = getExpectedFirstNode(**itNode, attPosition);
+        orbitRecord.position[0] = getDoubleFromFirstNode(positionNode, attX);
+        orbitRecord.position[1] = getDoubleFromFirstNode(positionNode, attY);
+        orbitRecord.position[2] = getDoubleFromFirstNode(positionNode, attZ);
 
         // Retrieve ECEF velocity
-        att1 = "velocity";
-        att2 = "x";
-        orbitRecord.velocity[0] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
-        att2 = "y";
-        orbitRecord.velocity[1] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
-        att2 = "z";
-        orbitRecord.velocity[2] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
+        ossimXmlNode const& velocityNode = getExpectedFirstNode(**itNode, attVelocity);
+        orbitRecord.velocity[0] = getDoubleFromFirstNode(velocityNode, attX);
+        orbitRecord.velocity[1] = getDoubleFromFirstNode(velocityNode, attY);
+        orbitRecord.velocity[2] = getDoubleFromFirstNode(velocityNode, attZ);
 
         //Add one orbits record
         theOrbitRecords.push_back(orbitRecord);
     }
 
     //Parse the near range time (in seconds)
-    theNearRangeTime = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/slantRangeTime")->getText().toDouble();
+    theNearRangeTime = getDoubleFromFirstNode(*xmlDoc->getRoot(), "imageAnnotation/imageInformation/slantRangeTime");;
 
     //Parse the range sampling rate
-    theRangeSamplingRate = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/rangeSamplingRate")->getText().toDouble();
+    theRangeSamplingRate = getDoubleFromFirstNode(*xmlDoc->getRoot(), "generalAnnotation/productInformation/rangeSamplingRate");;
 
     //Parse the range resolution
-    theRangeResolution = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
+    theRangeResolution = getDoubleFromFirstNode(*xmlDoc->getRoot(), "imageAnnotation/imageInformation/rangePixelSpacing");;
 
     //Parse the radar frequency
-    theRadarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
+    theRadarFrequency = getDoubleFromFirstNode(*xmlDoc->getRoot(), "generalAnnotation/productInformation/radarFrequency");;
 
     //Parse azimuth time interval
-    theAzimuthTimeInterval = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
+    theAzimuthTimeInterval = getDoubleFromFirstNode(*xmlDoc->getRoot(), "imageAnnotation/imageInformation/azimuthTimeInterval")*1000000;
 
 
     // Now read burst records as well
@@ -92,20 +105,11 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         BurstRecordType burstRecord;
 
         burstRecord.startLine = 0;
-
-        ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
-
-        std::replace(s.begin(), s.end(), 'T', ' ');
-
-        burstRecord.azimuthStartTime = boost::posix_time::time_from_string(s);
+        burstRecord.azimuthStartTime = getTimeFromFirstNode(*xmlDoc->getRoot(),"imageAnnotation/imageInformation/productFirstLineUtcTime");
 
         std::cout<< burstRecord.azimuthStartTime<<std::endl;
 
-        s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
-        std::replace(s.begin(), s.end(), 'T', ' ');
-
-        burstRecord.azimuthStopTime = boost::posix_time::time_from_string(s);
-
+        burstRecord.azimuthStopTime = getTimeFromFirstNode(*xmlDoc->getRoot(),"imageAnnotation/imageInformation/productLastLineUtcTime");
         burstRecord.endLine = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16()-1;
 
         theBurstRecords.push_back(burstRecord);
@@ -119,13 +123,9 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         {
             BurstRecordType burstRecord;
 
-            ossimString att1 = "azimuthTime";
-            ossimString s = (*itNode)->findFirstNode(att1)->getText();
-            std::replace(s.begin(), s.end(), 'T', ' ');
-            ossimSarSensorModel::TimeType azTime(boost::posix_time::time_from_string(s));
+            const ossimSarSensorModel::TimeType azTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
 
-            att1 = "firstValidSample";
-            s = (*itNode)->findFirstNode(att1)->getText();
+            ossimString const& s = (*itNode)->findFirstNode(attFirstValidSample)->getText();
 
             long first_valid(0), last_valid(0);
             bool begin_found(false), end_found(false);
@@ -181,16 +181,11 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         {
             CoordinateConversionRecordType coordRecord;
 
-            ossimString att1 = "azimuthTime";
-            ossimString s = (*itNode)->findFirstNode(att1)->getText();
-            std::replace(s.begin(), s.end(), 'T', ' ');
-            coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
+            coordRecord.azimuthTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
 
-            att1 = "sr0";
-            coordRecord.rg0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
+            coordRecord.rg0 = getDoubleFromFirstNode(**itNode, attSr0);;
 
-            att1 = "srgrCoefficients";
-            s = (*itNode)->findFirstNode(att1)->getText();
+            ossimString s = (*itNode)->findFirstNode(attSrgrCoefficients)->getText();
             std::vector<ossimString> ssplit = s.split(" ");
 
             for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
@@ -212,16 +207,11 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         {
             CoordinateConversionRecordType coordRecord;
 
-            ossimString att1 = "azimuthTime";
-            ossimString s = (*itNode)->findFirstNode(att1)->getText();
-            std::replace(s.begin(), s.end(), 'T', ' ');
-            coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
+            coordRecord.azimuthTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
 
-            att1 = "gr0";
-            coordRecord.rg0 = (*itNode)->findFirstNode(att1)->getText().toDouble();
+            coordRecord.rg0 = getDoubleFromFirstNode(**itNode, attGr0);
 
-            att1 = "grsrCoefficients";
-            s = (*itNode)->findFirstNode(att1)->getText();
+            ossimString s = (*itNode)->findFirstNode(attGrsrCoefficients)->getText();
             std::vector<ossimString> ssplit = s.split(" ");
 
             for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
@@ -245,16 +235,11 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         GCPRecordType gcpRecord;
 
         // Retrieve acquisition time
-        ossimString att1 = "azimuthTime";
-        ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        std::replace(s.begin(), s.end(), 'T', ' ');
-        gcpRecord.azimuthTime = boost::posix_time::time_from_string(s);
+        gcpRecord.azimuthTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
 
-        att1 = "slantRangeTime";
-        gcpRecord.slantRangeTime = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        gcpRecord.slantRangeTime = getDoubleFromFirstNode(**itNode, attSlantRangeTime);
 
-        att1 = "pixel";
-        gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        gcpRecord.imPt.x = getDoubleFromFirstNode(**itNode, attPixel);
 
         // In TOPSAR products, GCPs are weird (they fall in black lines
         // between burst. This code allows to move them to a valid area of
@@ -282,29 +267,25 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
                     acqStart = theBurstRecords.front().azimuthStartTime;
                     acqStartLine = theBurstRecords.front().startLine;
                 }
-                else if (gcpRecord.azimuthTime >=  theBurstRecords.front().azimuthStopTime)
+                else if (gcpRecord.azimuthTime >= theBurstRecords.front().azimuthStopTime)
                 {
                     acqStart = theBurstRecords.back().azimuthStartTime;
                     acqStartLine = theBurstRecords.back().startLine;
                 }
             }
-            boost::posix_time::time_duration timeSinceStart = (gcpRecord.azimuthTime-acqStart);
+            boost::posix_time::time_duration timeSinceStart = gcpRecord.azimuthTime - acqStart;
 
-            double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
+            const double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
             gcpRecord.imPt.y= timeSinceStartInMicroSeconds/theAzimuthTimeInterval + acqStartLine;
         }
         else
         {
-            att1 = "line";
-            gcpRecord.imPt.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
+            gcpRecord.imPt.y = getDoubleFromFirstNode(**itNode, attLine);;
         }
         ossimGpt geoPoint;
-        att1 = "latitude";
-        gcpRecord.worldPt.lat = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "longitude";
-        gcpRecord.worldPt.lon = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "height";
-        gcpRecord.worldPt.hgt = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        gcpRecord.worldPt.lat = getDoubleFromFirstNode(**itNode, attLatitude);
+        gcpRecord.worldPt.lon = getDoubleFromFirstNode(**itNode, attLongitude);
+        gcpRecord.worldPt.hgt = getDoubleFromFirstNode(**itNode, attHeight);
 
         theGCPRecords.push_back(gcpRecord);
     }
