@@ -42,7 +42,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         // Retrieve acquisition time
         ossimString att1 = "time";
         ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        s = s.replaceAllThatMatch("T"," ");
+        std::replace(s.begin(), s.end(), 'T', ' ');
         orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
         // Retrieve ECEF position
@@ -95,14 +95,14 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
         ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
 
-        s = s.replaceAllThatMatch("T"," ");
+        std::replace(s.begin(), s.end(), 'T', ' ');
 
         burstRecord.azimuthStartTime = boost::posix_time::time_from_string(s);
 
         std::cout<< burstRecord.azimuthStartTime<<std::endl;
 
         s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
-        s = s.replaceAllThatMatch("T"," ");
+        std::replace(s.begin(), s.end(), 'T', ' ');
 
         burstRecord.azimuthStopTime = boost::posix_time::time_from_string(s);
 
@@ -121,7 +121,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
             ossimString att1 = "azimuthTime";
             ossimString s = (*itNode)->findFirstNode(att1)->getText();
-            s = s.replaceAllThatMatch("T"," ");
+            std::replace(s.begin(), s.end(), 'T', ' ');
             ossimSarSensorModel::TimeType azTime(boost::posix_time::time_from_string(s));
 
             att1 = "firstValidSample";
@@ -183,7 +183,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
             ossimString att1 = "azimuthTime";
             ossimString s = (*itNode)->findFirstNode(att1)->getText();
-            s = s.replaceAllThatMatch("T"," ");
+            std::replace(s.begin(), s.end(), 'T', ' ');
             coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
             att1 = "sr0";
@@ -214,7 +214,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
             ossimString att1 = "azimuthTime";
             ossimString s = (*itNode)->findFirstNode(att1)->getText();
-            s = s.replaceAllThatMatch("T"," ");
+            std::replace(s.begin(), s.end(), 'T', ' ');
             coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
             att1 = "gr0";
@@ -247,7 +247,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         // Retrieve acquisition time
         ossimString att1 = "azimuthTime";
         ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        s = s.replaceAllThatMatch("T"," ");
+        std::replace(s.begin(), s.end(), 'T', ' ');
         gcpRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
         att1 = "slantRangeTime";

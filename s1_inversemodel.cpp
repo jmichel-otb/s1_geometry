@@ -414,7 +414,7 @@ int main(int argc, char * argv[])
       // Retrieve acquisition time
       ossimString att1 = "time";
       ossimString s = (*itNode)->findFirstNode(att1)->getText();
-      s = s.replaceAllThatMatch("T"," ");
+      std::replace(s.begin(), s.end(), 'T', ' ');
       std::cout<<s;
       boost::posix_time::ptime acqTime(boost::posix_time::time_from_string(s));
 
@@ -450,13 +450,13 @@ int main(int argc, char * argv[])
   std::cout<<"Reading other useful values ...\n";
   ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
   //ossimString s = xmlDoc->getRoot()->findFirstNode("generalAnnotation/downlinkInformationList/downlinkInformation/firstLineSensingTime")->getText();
-  s = s.replaceAllThatMatch("T"," ");
+  std::replace(s.begin(), s.end(), 'T', ' ');
   std::cout<<"Acquisition start time: "<<s<<std::endl;
   acqStartTime = boost::posix_time::time_from_string(s);
 
   s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productLastLineUtcTime")->getText();
   //s = xmlDoc->getRoot()->findFirstNode("generalAnnotation/downlinkInformationList/downlinkInformation/lastLineSensingTime")->getText();
-  s = s.replaceAllThatMatch("T"," ");
+  std::replace(s.begin(), s.end(), 'T', ' ');
   std::cout<<"Acquisition stop time: "<<s<<std::endl;
   acqStopTime = boost::posix_time::time_from_string(s);
 
@@ -526,7 +526,7 @@ int main(int argc, char * argv[])
     {
         ossimString att1 = "azimuthTime";
         ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        s = s.replaceAllThatMatch("T"," ");
+        std::replace(s.begin(), s.end(), 'T', ' ');
         boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
 
         att1 = "firstValidSample";
@@ -597,7 +597,7 @@ int main(int argc, char * argv[])
     {
         ossimString att1 = "azimuthTime";
         ossimString s = (*itNode)->findFirstNode(att1)->getText();
-        s = s.replaceAllThatMatch("T"," ");
+        std::replace(s.begin(), s.end(), 'T', ' ');
         boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
 
         att1 = "sr0";
@@ -638,7 +638,7 @@ int main(int argc, char * argv[])
     // Retrieve acquisition time
     ossimString att1 = "azimuthTime";
     ossimString s = (*itNode)->findFirstNode(att1)->getText();
-    s = s.replaceAllThatMatch("T"," ");
+    std::replace(s.begin(), s.end(), 'T', ' ');
     boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
 
     att1 = "slantRangeTime";
