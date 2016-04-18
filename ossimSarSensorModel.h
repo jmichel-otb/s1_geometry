@@ -31,7 +31,6 @@
 namespace ossimplugins
 {
 
-
 class ossimSarSensorModel : public ossimSensorModel
 {
 public:
@@ -39,35 +38,35 @@ public:
   typedef boost::posix_time::ptime         TimeType;
   typedef boost::posix_time::time_duration DurationType;
 
-  typedef struct
+  struct OrbitRecordType
   {
     TimeType azimuthTime;
     ossimEcefPoint position;
     ossimEcefVector velocity;
-  } OrbitRecordType;
+  };
 
-  typedef struct
+  struct GCPRecordType
   {
     TimeType azimuthTime;
     double   slantRangeTime;
     ossimDpt imPt;
     ossimGpt worldPt;
-  } GCPRecordType;
+  };
 
-  typedef struct
+  struct BurstRecordType
   {
     TimeType azimuthStartTime;
     unsigned long startLine;
     TimeType azimuthStopTime;
     unsigned long endLine;
-  } BurstRecordType;
+  };
 
-  typedef struct
+  struct CoordinateConversionRecordType
   {
     TimeType azimuthTime;
     double rg0;
     std::vector<double> coefs;
-  } CoordinateConversionRecordType;
+  };
   
   /** Constructor */
   ossimSarSensorModel();
