@@ -21,10 +21,10 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
     //Parse specific metadata for Sentinel1
     //TODO add as members to the Sentinel1SarSensorModel
-    std::string product_type = xmlDoc->getRoot()->findFirstNode("adsHeader/productType")->getText();
-    std::string mode = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
-    std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
-    std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
+    const std::string product_type = xmlDoc->getRoot()->findFirstNode("adsHeader/productType")->getText();
+    const std::string mode = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
+    const std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
+    const std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
 
     isGRD = (product_type == "GRD");
 
@@ -41,8 +41,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
         // Retrieve acquisition time
         ossimString att1 = "time";
-        ossimString s;
-        s = (*itNode)->findFirstNode(att1)->getText();
+        ossimString s = (*itNode)->findFirstNode(att1)->getText();
         s = s.replaceAllThatMatch("T"," ");
         orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
@@ -56,7 +55,6 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         orbitRecord.position[2] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
 
         // Retrieve ECEF velocity
-        ossimEcefVector vel;
         att1 = "velocity";
         att2 = "x";
         orbitRecord.velocity[0] = (*itNode)->findFirstNode(att1)->findFirstNode(att2)->getText().toDouble();
@@ -122,8 +120,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
             BurstRecordType burstRecord;
 
             ossimString att1 = "azimuthTime";
-            ossimString s;
-            s = (*itNode)->findFirstNode(att1)->getText();
+            ossimString s = (*itNode)->findFirstNode(att1)->getText();
             s = s.replaceAllThatMatch("T"," ");
             ossimSarSensorModel::TimeType azTime(boost::posix_time::time_from_string(s));
 
@@ -185,8 +182,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
             CoordinateConversionRecordType coordRecord;
 
             ossimString att1 = "azimuthTime";
-            ossimString s;
-            s = (*itNode)->findFirstNode(att1)->getText();
+            ossimString s = (*itNode)->findFirstNode(att1)->getText();
             s = s.replaceAllThatMatch("T"," ");
             coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
@@ -217,8 +213,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
             CoordinateConversionRecordType coordRecord;
 
             ossimString att1 = "azimuthTime";
-            ossimString s;
-            s = (*itNode)->findFirstNode(att1)->getText();
+            ossimString s = (*itNode)->findFirstNode(att1)->getText();
             s = s.replaceAllThatMatch("T"," ");
             coordRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
@@ -251,8 +246,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
         // Retrieve acquisition time
         ossimString att1 = "azimuthTime";
-        ossimString s;
-        s = (*itNode)->findFirstNode(att1)->getText();
+        ossimString s = (*itNode)->findFirstNode(att1)->getText();
         s = s.replaceAllThatMatch("T"," ");
         gcpRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
@@ -261,7 +255,6 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
         att1 = "pixel";
         gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
-
 
         // In TOPSAR products, GCPs are weird (they fall in black lines
         // between burst. This code allows to move them to a valid area of

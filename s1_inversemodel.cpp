@@ -29,7 +29,7 @@ const double C = 299792458;
 double compute_doppler(const double& radarFreq,const ossimEcefVector& vel, const ossimEcefPoint& sensorPos, const ossimEcefPoint& inputPos)
 {
   // Eq. 19, p. 25
-  ossimEcefVector s2gVec = inputPos - sensorPos;
+  const ossimEcefVector s2gVec = inputPos - sensorPos;
 
   return 2 * radarFreq * vel.dot(s2gVec);
 }
@@ -37,7 +37,6 @@ double compute_doppler(const double& radarFreq,const ossimEcefVector& vel, const
 
 void interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType& records, ossimEcefPoint& pos, ossimEcefVector & vel, unsigned int deg = 8)
 {
-  
   unsigned int nBegin(0), nEnd(0);
 
   pos[0] = 0;
@@ -47,7 +46,7 @@ void interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType&
   vel[0] = 0;
   vel[1] = 0;
   vel[2] = 0;
-  
+
   if(records.size()<deg)
     {
     nEnd = records.size()-1;
@@ -60,9 +59,9 @@ void interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType&
 
     if(t_min.is_negative())
       t_min = t_min.invert_sign();
-    
+
     unsigned int count = 0;
-    
+
     for (RecordVectorType::const_iterator b = records.begin(), e = records.end()
             ; b != e
             ; ++b, ++count
@@ -72,34 +71,29 @@ void interpolatePosVel(const boost::posix_time::ptime t, const RecordVectorType&
 
       if(current_time.is_negative())
         current_time = current_time.invert_sign();
-      
+
       if(t_min > current_time)
         {
         t_min_idx = count;
         t_min = current_time;
         }
-      }  
+      }
     nBegin = std::max((int)t_min_idx-(int)deg/2+1,(int)0);
     nEnd = std::min(nBegin+deg-1,(unsigned int)records.size());
     nBegin = nEnd<records.size()-1 ? nBegin : nEnd-deg+1;
     }
 
-
-  
-
   for(unsigned int i = nBegin; i < nEnd; ++i)
     {
 
     double w = 1.;
-    
-    
+
     for(unsigned int j = nBegin; j < nEnd; ++j)
       {
-
       if(j!=i)
         {
-        double td1 = (t - boost::get<0>(records[j])).total_microseconds();
-        double td2 = (boost::get<0>(records[i]) - boost::get<0>(records[j])).total_microseconds();
+        const double td1 = (t - boost::get<0>(records[j])).total_microseconds();
+        const double td2 = (boost::get<0>(records[i]) - boost::get<0>(records[j])).total_microseconds();
         w*=td1/td2;
         }
       }
@@ -144,7 +138,7 @@ double slantRangeToGroundRange(const double & slantRange, const boost::posix_tim
                 previousRecord = nextrecord;
                 ++it;
                 nextrecord = it;
-            }      
+            }
         }
         if(!found)
         {
@@ -153,9 +147,9 @@ double slantRangeToGroundRange(const double & slantRange, const boost::posix_tim
         else
         {
             // If azimuth time is between 2 records, interpolate
-            double interp = (azimuthTime-boost::get<0>(*previousRecord)).total_microseconds()/static_cast<double>((boost::get<0>(*nextrecord)-boost::get<0>(*previousRecord)).total_microseconds());
+            const double interp = (azimuthTime-boost::get<0>(*previousRecord)).total_microseconds()/static_cast<double>((boost::get<0>(*nextrecord)-boost::get<0>(*previousRecord)).total_microseconds());
 
-            double sr0 = (1-interp) * boost::get<1>(*previousRecord)+ interp*boost::get<1>(*nextrecord);
+            const double sr0 = (1-interp) * boost::get<1>(*previousRecord)+ interp*boost::get<1>(*nextrecord);
 
             std::vector<double> coefs;
             std::vector<double>::const_iterator pIt = boost::get<2>(*previousRecord).begin();
@@ -172,7 +166,7 @@ double slantRangeToGroundRange(const double & slantRange, const boost::posix_tim
 
     // Now that we have the interpolated coefs, compute ground range
     // from slant range
-    double sr_minus_sr0 = slantRange - boost::get<1>(srgrRecord);
+    const double sr_minus_sr0 = slantRange - boost::get<1>(srgrRecord);
 
     double ground_range = 0;
 
@@ -187,16 +181,16 @@ double slantRangeToGroundRange(const double & slantRange, const boost::posix_tim
 ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime acqStartTime, const double & azimythTimeIntervalInMicroSeconds, const double & nearRangeTime, const double & rangeSamplingRate, const double & rangeRes, const RecordVectorType & records, const BurstRecordVectorType& burstRecords, const SRGRRecordVectorType& srgrRecords, const ossimGpt& worldPoint, boost::posix_time::ptime& estimatedTime, double & estimatedSlantRangeTime)
 {
   // First convert lat/lon to ECEF
-  ossimEcefPoint inputPt(worldPoint);
+  const ossimEcefPoint inputPt(worldPoint);
 
   RecordVectorType::const_iterator it = records.begin();
 
   double lastDoppler = compute_doppler(radarFreq, boost::get<2>(*it),boost::get<1>(*it),inputPt);
   RecordVectorType::const_iterator lastRecord = it;
-  
-  bool lastDopplerSign = lastDoppler < 0;
+
+  const bool lastDopplerSign = lastDoppler < 0;
   bool found = false;
-  
+
   ++it;
 
   RecordVectorType::const_iterator currentRecord = it;
@@ -208,10 +202,10 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
     currentRecord = it;
     currentDoppler = compute_doppler(radarFreq, boost::get<2>(*it),boost::get<1>(*it),inputPt);
 
-    bool currentDopplerSign = currentDoppler< 0;
+    const bool currentDopplerSign = currentDoppler< 0;
 
     //std::cout<<"last doppler: "<<lastDoppler<<", current doppler: "<<currentDoppler<<std::endl;
-    
+
     if(currentDopplerSign != lastDopplerSign)
       {
       found = true;
@@ -227,26 +221,26 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
   // TODO: Handle not found case here
 
   // now interpolate time and sensor position
-  double interp = std::abs(lastDoppler)/(std::abs(lastDoppler)+std::abs(currentDoppler));
+  const double interp = std::abs(lastDoppler)/(std::abs(lastDoppler)+std::abs(currentDoppler));
 
   //std::cout<<"Interpolation coef: "<<interp<<std::endl;
-  
+
   // Here I do not now if microsecond is sufficient
-  boost::posix_time::time_duration delta_td = boost::get<0>(*currentRecord) - boost::get<0>(*lastRecord);
-  double deltat = delta_td.total_microseconds();
-  
+  const boost::posix_time::time_duration delta_td = boost::get<0>(*currentRecord) - boost::get<0>(*lastRecord);
+  const double deltat = delta_td.total_microseconds();
+
   //std::cout<<"Corresponding deltat: "<<deltat<<" µs"<<std::endl;
-  
-  boost::posix_time::time_duration td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(interp * deltat+0.5)));
-  
+
+  const boost::posix_time::time_duration td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(interp * deltat+0.5)));
+
   estimatedTime = boost::get<0>(*lastRecord)+td;
-  
+
   //std::cout<<"Times: "<<boost::posix_time::to_simple_string(boost::get<0>(*lastRecord))<<" < "<<boost::posix_time::to_simple_string(estimatedTime)<<" < "<<boost::posix_time::to_simple_string(boost::get<0>(*currentRecord))<<std::endl;
 
-  
-  
+
+
   // ossimEcefVector deltaPos = (boost::get<1>(*currentRecord)-boost::get<1>(*lastRecord));
-  // deltaPos = deltaPos * interp;  
+  // deltaPos = deltaPos * interp;
   // ossimEcefPoint interSensorPos = boost::get<1>(*lastRecord) + deltaPos;
 
   ossimEcefPoint interSensorPos;
@@ -254,11 +248,11 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
 
   interpolatePosVel(estimatedTime,records,interSensorPos,interSensorVel);
 
-  
+
   //std::cout<<"Sensor positions: "<<boost::get<1>(*lastRecord)<<" <
   //"<<interSensorPos<<" < "<<boost::get<1>(*currentRecord)<<std::endl;
- 
-  
+
+
   // TODO: Handle possible bistatic bias correction here (not needed
   // for S1)
 
@@ -266,12 +260,12 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
 
 
   // TODO: Look this in metadata (if it should be applied)
-  bool bistatic_correction = false;
+  const bool bistatic_correction = false;
 
   if(bistatic_correction)
     {
-    double halftrange = 1000000 * (interSensorPos-inputPt).magnitude()/C;
-    boost::posix_time::time_duration bistatic_td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(halftrange+0.5)));
+    const double halftrange = 1000000 * (interSensorPos-inputPt).magnitude()/C;
+    const boost::posix_time::time_duration bistatic_td = boost::posix_time::microseconds(static_cast<unsigned long>(floor(halftrange+0.5)));
     estimatedTime = estimatedTime + bistatic_td;
 
     std::cout<<"Bistatic td: "<<boost::posix_time::to_simple_string(bistatic_td)<<std::endl;
@@ -279,13 +273,12 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
     // interp = static_cast<double>((td+bistatic_td).total_microseconds())/static_cast<double>(delta_td.total_microseconds());
 
     // deltaPos = (boost::get<1>(*currentRecord)-boost::get<1>(*lastRecord));
-    // deltaPos = deltaPos * interp;  
+    // deltaPos = deltaPos * interp;
     // interSensorPos = boost::get<1>(*lastRecord) + deltaPos;
 
     interpolatePosVel(estimatedTime,records,interSensorPos,interSensorVel);
-    
     }
-  
+
   ossimDpt resp;
 
   if(burstRecords.empty())
@@ -293,12 +286,12 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
     // Now compute fractional line index
     // Eq 22 p 27
 
-    boost::posix_time::time_duration timeSinceStart = (estimatedTime-acqStartTime);
-  
-    double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
-  
+    const boost::posix_time::time_duration timeSinceStart = (estimatedTime-acqStartTime);
+
+    const double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
+
     //std::cout<<"timeSinceStartInMicroSeconds: "<<timeSinceStartInMicroSeconds<<" µs"<<std::endl;
-  
+
     resp.y = timeSinceStartInMicroSeconds/azimythTimeIntervalInMicroSeconds;
     }
   else
@@ -307,8 +300,6 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
     bool burstFound(false);
     unsigned long acqStartLine(0);
 
-   
-    
     for (BurstRecordVectorType::const_reverse_iterator bIt = burstRecords.rbegin(), e = burstRecords.rend()
             ; bIt != e && !burstFound
             ; ++bIt
@@ -318,7 +309,7 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
         {
         burstFound = true;
         acqStart = boost::get<0>(*bIt);
-        acqStartLine = boost::get<1>(*bIt);        
+        acqStartLine = boost::get<1>(*bIt);
         }
       }
 
@@ -328,7 +319,7 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
         {
         acqStart = boost::get<0>(burstRecords.front());
         acqStartLine = boost::get<1>(burstRecords.front());
-        } 
+        }
       else if (estimatedTime > boost::get<0>(burstRecords.back()))
         {
         acqStart = boost::get<0>(burstRecords.back());
@@ -337,46 +328,39 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
       }
 
     std::cout<<boost::posix_time::to_simple_string(acqStart)<<" "<<acqStartLine<<std::endl;
-    
 
-      boost::posix_time::time_duration timeSinceStart = (estimatedTime-acqStart);
-      
-      double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
-      
-      std::cout<<"timeSinceStartInMicroSeconds: "<<timeSinceStartInMicroSeconds<<" µs "<< timeSinceStartInMicroSeconds/azimythTimeIntervalInMicroSeconds <<std::endl;
-  
-      resp.y = timeSinceStartInMicroSeconds/azimythTimeIntervalInMicroSeconds + acqStartLine;
+    const boost::posix_time::time_duration timeSinceStart = (estimatedTime-acqStart);
 
+    const double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
 
-      
+    std::cout<<"timeSinceStartInMicroSeconds: "<<timeSinceStartInMicroSeconds<<" µs "<< timeSinceStartInMicroSeconds/azimythTimeIntervalInMicroSeconds <<std::endl;
+
+    resp.y = timeSinceStartInMicroSeconds/azimythTimeIntervalInMicroSeconds + acqStartLine;
     }
-  
+
   // TODO: Here this is different for products with burst
-  
+
   //std::cout<<"Estimated line position: "<<resp.y<<std::endl;
 
   // Now compute fractional sample index
   // Eq 23 and 24 p. 28
 
-  double range_distance = (interSensorPos-inputPt).magnitude();
+  const double range_distance = (interSensorPos-inputPt).magnitude();
   estimatedSlantRangeTime = 2*range_distance/C;
- 
+
   if(srgrRecords.empty())
     {
     // SLC product case
-  
-   
     resp.x = (estimatedSlantRangeTime - nearRangeTime)*rangeSamplingRate;
     }
   else
     {
-    double ground_range = slantRangeToGroundRange(range_distance,estimatedTime,srgrRecords);
-    double near_ground_range = slantRangeToGroundRange(nearRangeTime*C/2,estimatedTime,srgrRecords);
+    const double ground_range = slantRangeToGroundRange(range_distance,estimatedTime,srgrRecords);
+    const double near_ground_range = slantRangeToGroundRange(nearRangeTime*C/2,estimatedTime,srgrRecords);
 
     resp.x = (ground_range - near_ground_range)/rangeRes;
-    
     }
-  
+
   //std::cout<<"Estimated sample position: "<<resp.x<<std::endl;
 
   return resp;
@@ -387,10 +371,10 @@ ossimDpt inverse_loc(const double & radarFreq, const boost::posix_time::ptime ac
 int main(int argc, char * argv[])
 {
   std::cout.precision(9);
-  
+
   if(argc != 2)
     return EXIT_FAILURE;
-  
+
   std::string annotationXml = argv[1];
 
   unsigned int nbLines = 0;
@@ -399,25 +383,22 @@ int main(int argc, char * argv[])
   boost::posix_time::ptime acqStopTime;
   double nearRangeTime(0.);
   double rangeSamplingRate(0.);
-  
+
   RecordVectorType records;
   SRGRRecordVectorType srgrRecords;
-  
 
   ossimRefPtr<ossimXmlDocument> xmlDoc = new ossimXmlDocument(annotationXml);
-  
 
-  std::string product_type = xmlDoc->getRoot()->findFirstNode("adsHeader/productType")->getText();
-  std::string mode = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
-  std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
-  std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
+  const std::string product_type = xmlDoc->getRoot()->findFirstNode("adsHeader/productType")->getText();
+  const std::string mode = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
+  const std::string swath = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
+  const std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
 
-  bool isGrd = (product_type == "GRD");
-
+  const bool isGrd = (product_type == "GRD");
 
   std::cout<<"Product type: "<<product_type<<std::endl;
   std::cout<<"Mode: "<<mode<<", swath: "<<swath<<", polarisation: "<<polarisation<<std::endl<<std::endl;
-  
+
   // First, lookup position/velocity records
   std::vector<ossimRefPtr<ossimXmlNode> > xnodes;
   xmlDoc->findNodes("/product/generalAnnotation/orbitList/orbit",xnodes);
@@ -432,8 +413,7 @@ int main(int argc, char * argv[])
   {
       // Retrieve acquisition time
       ossimString att1 = "time";
-      ossimString s;
-      s = (*itNode)->findFirstNode(att1)->getText();
+      ossimString s = (*itNode)->findFirstNode(att1)->getText();
       s = s.replaceAllThatMatch("T"," ");
       std::cout<<s;
       boost::posix_time::ptime acqTime(boost::posix_time::time_from_string(s));
@@ -465,12 +445,12 @@ int main(int argc, char * argv[])
       records.push_back(make_tuple(acqTime,pos,vel));
   }
   std::cout<<"done."<<std::endl<<std::endl;
-  
+
 
   std::cout<<"Reading other useful values ..."<<std::endl;
   ossimString s = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/productFirstLineUtcTime")->getText();
   //ossimString s = xmlDoc->getRoot()->findFirstNode("generalAnnotation/downlinkInformationList/downlinkInformation/firstLineSensingTime")->getText();
-    s = s.replaceAllThatMatch("T"," ");
+  s = s.replaceAllThatMatch("T"," ");
   std::cout<<"Acquisition start time: "<<s<<std::endl;
   acqStartTime = boost::posix_time::time_from_string(s);
 
@@ -488,65 +468,64 @@ int main(int argc, char * argv[])
   nearRangeTime = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/slantRangeTime")->getText().toDouble();
   std::cout<<"Near range time: "<<nearRangeTime<<" s"<<std::endl;
 
-  double nearRangeDistance = nearRangeTime * C /2;
+  const double nearRangeDistance = nearRangeTime * C /2;
 
   std::cout<<"Near range distance: "<<nearRangeDistance<< "m"<<std::endl;
 
   rangeSamplingRate = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/rangeSamplingRate")->getText().toDouble();
-  double estimatedRangeRes = (1/rangeSamplingRate)*C/2;
+  const double estimatedRangeRes = (1/rangeSamplingRate)*C/2;
   std::cout<<"Range sampling rate: "<<rangeSamplingRate<<" Hz (estimated range res: "<<estimatedRangeRes<<" m)"<<std::endl;
 
-  double rangeRes = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
+  const double rangeRes = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/rangePixelSpacing")->getText().toDouble();
   std::cout<<"Range res from product: "<<rangeRes<<" m"<<std::endl;
 
-  double radarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
+  const double radarFrequency = xmlDoc->getRoot()->findFirstNode("generalAnnotation/productInformation/radarFrequency")->getText().toDouble();
   std::cout<<"Radar frequency: "<<radarFrequency<<" Hz"<<std::endl;
-  
-  boost::posix_time::time_duration td = (acqStopTime - acqStartTime);
-  
-  double acquisition_duration = td.total_microseconds();
+
+  const boost::posix_time::time_duration td = (acqStopTime - acqStartTime);
+
+  const double acquisition_duration = td.total_microseconds();
 
   std::cout<<"Acquisition duration: "<<boost::posix_time::to_simple_string(td)<<" ("<<acquisition_duration/1000000<<" s)"<<std::endl;
 
-  double estimatedAzimuthTimeIntervalInMicroSeconds = acquisition_duration/nbLines;
-  double prf = 1000000/estimatedAzimuthTimeIntervalInMicroSeconds;
+  const double estimatedAzimuthTimeIntervalInMicroSeconds = acquisition_duration/nbLines;
+  const double prf = 1000000/estimatedAzimuthTimeIntervalInMicroSeconds;
 
-  double azimuthTimeIntervalInMicroSeconds = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
+  const double azimuthTimeIntervalInMicroSeconds = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/azimuthTimeInterval")->getText().toDouble()*1000000;
 
   std::cout<<"Estimated prf: "<<prf<<" Hz ("<<estimatedAzimuthTimeIntervalInMicroSeconds/1000000<<" s)"<<std::endl;
   std::cout<<"Azimuth time interval from product: "<<azimuthTimeIntervalInMicroSeconds/1000000<<" s"<<std::endl;
-  
+
   std::cout<<"Done."<<std::endl<<std::endl;
-  
+
   // Now read burst records as well
   BurstRecordVectorType burstRecords;
 
   std::cout<<"Reading burst records ..."<<std::endl;
-  xnodes.clear();  
+  xnodes.clear();
   xmlDoc->findNodes("/product/swathTiming/burstList/burst",xnodes);
 
   if(xnodes.empty())
     {
-  std::cout<<"No burst records found, skipping"<<std::endl;
+        std::cout<<"No burst records found, skipping"<<std::endl;
     }
   else
     {
-    std::cout<<"Number of burst records found: "<<xnodes.size()<<std::endl; 
+    std::cout<<"Number of burst records found: "<<xnodes.size()<<std::endl;
 
-    unsigned int linesPerBurst = xmlDoc->getRoot()->findFirstNode("swathTiming/linesPerBurst")->getText().toUInt16();
+    const unsigned int linesPerBurst = xmlDoc->getRoot()->findFirstNode("swathTiming/linesPerBurst")->getText().toUInt16();
 
     std::cout<<"LinesPerBurst: "<<linesPerBurst<<std::endl;
 
     unsigned int burstId(0);
-    
+
     for (std::vector<ossimRefPtr<ossimXmlNode> >::const_iterator itNode = xnodes.begin(), e = xnodes.end()
             ; itNode != e
             ; ++itNode, ++burstId
         )
-    { 
+    {
         ossimString att1 = "azimuthTime";
-        ossimString s;
-        s = (*itNode)->findFirstNode(att1)->getText();
+        ossimString s = (*itNode)->findFirstNode(att1)->getText();
         s = s.replaceAllThatMatch("T"," ");
         boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
 
@@ -588,12 +567,11 @@ int main(int argc, char * argv[])
             }
         }
 
-        unsigned long burstFirstValidLine = burstId*linesPerBurst + first_valid;
-        unsigned long burstLastValidLine  = burstId*linesPerBurst + last_valid;
+        const unsigned long burstFirstValidLine = burstId*linesPerBurst + first_valid;
+        const unsigned long burstLastValidLine  = burstId*linesPerBurst + last_valid;
 
-
-        boost::posix_time::ptime burstFirstValidTime = azTime + boost::posix_time::microseconds(first_valid*azimuthTimeIntervalInMicroSeconds);
-        boost::posix_time::ptime burstLastValidTime = azTime + boost::posix_time::microseconds(last_valid*azimuthTimeIntervalInMicroSeconds);
+        const boost::posix_time::ptime burstFirstValidTime = azTime + boost::posix_time::microseconds(first_valid*azimuthTimeIntervalInMicroSeconds);
+        const boost::posix_time::ptime burstLastValidTime = azTime + boost::posix_time::microseconds(last_valid*azimuthTimeIntervalInMicroSeconds);
 
         std::cout<<"Burst #"<<burstId<<std::endl;
         std::cout<<"FirstValidSample: "<<burstFirstValidLine<<" ("<<burstFirstValidTime<<")"<<std::endl;
@@ -608,7 +586,7 @@ int main(int argc, char * argv[])
     {
     std::cout<<"Reading Slant range to Ground range coefficients ..."<<std::endl;
 
-    xnodes.clear();  
+    xnodes.clear();
     xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
     std::cout<<"Number of records found: "<<xnodes.size()<<std::endl;
 
@@ -618,8 +596,7 @@ int main(int argc, char * argv[])
         )
     {
         ossimString att1 = "azimuthTime";
-        ossimString s;
-        s = (*itNode)->findFirstNode(att1)->getText();
+        ossimString s = (*itNode)->findFirstNode(att1)->getText();
         s = s.replaceAllThatMatch("T"," ");
         boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
 
@@ -640,19 +617,19 @@ int main(int argc, char * argv[])
             coefs.push_back(cIt->toDouble());
         }
 
-        srgrRecords.push_back(boost::make_tuple(azTime,sr0,coefs));      
+        srgrRecords.push_back(boost::make_tuple(azTime,sr0,coefs));
     }
 
     std::cout<<"Done."<<std::endl<<std::endl;
     }
-  
-  
+
+
   std::cout<<"Reading ground control points ..."<<std::endl;
   GCPVectorType gcps;
   xnodes.clear();
   xmlDoc->findNodes("/product/geolocationGrid/geolocationGridPointList/geolocationGridPoint",xnodes);
   std::cout<<"Number of GCPs found: "<<xnodes.size()<<std::endl;
-  
+
   for (std::vector<ossimRefPtr<ossimXmlNode> >::const_iterator itNode = xnodes.begin(), eNode = xnodes.end()
           ; itNode != eNode
           ; ++itNode
@@ -660,14 +637,13 @@ int main(int argc, char * argv[])
     {
     // Retrieve acquisition time
     ossimString att1 = "azimuthTime";
-    ossimString s;
-    s = (*itNode)->findFirstNode(att1)->getText();
+    ossimString s = (*itNode)->findFirstNode(att1)->getText();
     s = s.replaceAllThatMatch("T"," ");
     boost::posix_time::ptime azTime(boost::posix_time::time_from_string(s));
 
     att1 = "slantRangeTime";
     double slantRangeTime = (*itNode)->findFirstNode(att1)->getText().toDouble();
-    
+
     ossimDpt imPoint;
     att1 = "pixel";
     imPoint.x = (*itNode)->findFirstNode(att1)->getText().toDouble();
@@ -675,48 +651,48 @@ int main(int argc, char * argv[])
     // imPoint.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
     if(!burstRecords.empty())
-      {
-    boost::posix_time::ptime acqStart;
-    bool burstFound(false);
-    unsigned long acqStartLine(0);
-    
-    for (BurstRecordVectorType::const_reverse_iterator bIt = burstRecords.rbegin(), bEnd = burstRecords.rend()
-            ; bIt != bEnd && !burstFound
-            ; ++bIt
-        )
-      {
-      if(azTime > boost::get<0>(*bIt) && azTime < boost::get<2>(*bIt))
-        {
-        burstFound = true;
-        acqStart = boost::get<0>(*bIt);
-        acqStartLine = boost::get<1>(*bIt);        
-        }
-      }
+    {
+        boost::posix_time::ptime acqStart;
+        bool burstFound(false);
+        unsigned long acqStartLine(0);
 
-    if(!burstFound)
-      {
-      if(azTime < boost::get<0>(burstRecords.front()))
+        for (BurstRecordVectorType::const_reverse_iterator bIt = burstRecords.rbegin(), bEnd = burstRecords.rend()
+                ; bIt != bEnd && !burstFound
+                ; ++bIt
+            )
         {
-        acqStart = boost::get<0>(burstRecords.front());
-        acqStartLine = boost::get<1>(burstRecords.front());
-        } 
-      else if (azTime > boost::get<0>(burstRecords.back()))
-        {
-        acqStart = boost::get<0>(burstRecords.back());
-        acqStartLine = boost::get<1>(burstRecords.back());
+            if(azTime > boost::get<0>(*bIt) && azTime < boost::get<2>(*bIt))
+            {
+                burstFound = true;
+                acqStart = boost::get<0>(*bIt);
+                acqStartLine = boost::get<1>(*bIt);
+            }
         }
-      }
-    boost::posix_time::time_duration timeSinceStart = (azTime-acqStart);
-      
-    double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
-    imPoint.y = timeSinceStartInMicroSeconds/azimuthTimeIntervalInMicroSeconds + acqStartLine;
+
+        if(!burstFound)
+        {
+            if(azTime < boost::get<0>(burstRecords.front()))
+            {
+                acqStart = boost::get<0>(burstRecords.front());
+                acqStartLine = boost::get<1>(burstRecords.front());
+            }
+            else if (azTime > boost::get<0>(burstRecords.back()))
+            {
+                acqStart = boost::get<0>(burstRecords.back());
+                acqStartLine = boost::get<1>(burstRecords.back());
+            }
+        }
+        boost::posix_time::time_duration timeSinceStart = (azTime-acqStart);
+
+        const double timeSinceStartInMicroSeconds = timeSinceStart.total_microseconds();
+        imPoint.y = timeSinceStartInMicroSeconds/azimuthTimeIntervalInMicroSeconds + acqStartLine;
     }
-    
+
     else
-      {
-       att1 = "line";
-       imPoint.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
-       }
+    {
+        att1 = "line";
+        imPoint.y = (*itNode)->findFirstNode(att1)->getText().toDouble();
+    }
     ossimGpt geoPoint;
     att1 = "latitude";
     geoPoint.lat = (*itNode)->findFirstNode(att1)->getText().toDouble();
@@ -739,7 +715,7 @@ int main(int argc, char * argv[])
       boost::posix_time::ptime estimatedTime;
       double estimatedSlantRangeTime;
 
-      ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeTime, rangeSamplingRate, rangeRes, records, burstRecords,srgrRecords,boost::get<3>(*itGcp),estimatedTime,estimatedSlantRangeTime);
+      const ossimDpt estimatedPos = inverse_loc(radarFrequency,acqStartTime,azimuthTimeIntervalInMicroSeconds, nearRangeTime, rangeSamplingRate, rangeRes, records, burstRecords,srgrRecords,boost::get<3>(*itGcp),estimatedTime,estimatedSlantRangeTime);
 
       std::cout<<"ProcessingGCP #"<<count<<":"<<std::endl;
       std::cout<<"Position: "<<boost::get<2>(*itGcp)<<", estimated: "<<estimatedPos<<", residual: "<<estimatedPos-boost::get<2>(*itGcp)<<std::endl;
@@ -747,7 +723,6 @@ int main(int argc, char * argv[])
       std::cout<<"Slant range time: "<<boost::get<1>(*itGcp)<<", estimated: "<<estimatedSlantRangeTime<<", residual: "<<boost::get<1>(*itGcp)-estimatedSlantRangeTime<<std::endl;
       std::cout<<std::endl;
   }
-  
 
   return EXIT_SUCCESS;
 }

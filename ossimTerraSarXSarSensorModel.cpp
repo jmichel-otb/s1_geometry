@@ -35,8 +35,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
 
         // Retrieve acquisition time
         ossimString att1 = "timeUTC";
-        ossimString s;
-        s = (*itNode)->findFirstNode(att1)->getText();
+        ossimString s = (*itNode)->findFirstNode(att1)->getText();
         s = s.replaceAllThatMatch("T"," ");
         orbitRecord.azimuthTime = boost::posix_time::time_from_string(s);
 
@@ -49,7 +48,6 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
         orbitRecord.position[2] = (*itNode)->findFirstNode(att1)->getText().toDouble();
 
         // Retrieve ECEF velocity
-        ossimEcefVector vel;
         att1 = "velX";
         orbitRecord.velocity[0] = (*itNode)->findFirstNode(att1)->getText().toDouble();
         att1 = "velY";
@@ -97,7 +95,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
 
     std::cout << "azimuthTimeStop " << azimuthTimeStop << std::endl;
 
-    double td = (azimuthTimeStop - azimuthTimeStart).total_microseconds();
+    const double td = (azimuthTimeStop - azimuthTimeStart).total_microseconds();
 
     // numberOfRows
     unsigned int numberOfRows = xmlDoc->getRoot()->findFirstNode("productInfo/imageDataInfo/imageRaster/numberOfRows")->getText().toUInt16();
@@ -124,7 +122,6 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     if(isGRD)
     {
         //Retrieve Slant Range to Ground range coeddifcients
-
         CoordinateConversionRecordType coordRecord;
 
         //Get azimuth time start (again)
@@ -177,7 +174,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
 
         // Get delta acquisition time
         ossimString att1 = "t";
-        double deltaAzimuth = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        const double deltaAzimuth = (*itNode)->findFirstNode(att1)->getText().toDouble();
         gcpRecord.azimuthTime = azimuthTimeStart + boost::posix_time::microseconds(deltaAzimuth * 1000000);
 
         //Get delta range time
