@@ -709,7 +709,7 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 
 
       // Estimate times
-      bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+      const bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
       this->worldToLineSample(gcpIt->worldPt,estimatedImPt);
 
       const bool thisSuccess
@@ -726,7 +726,6 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 
       if(verbose)
       {
-
           std::cout<<"GCP #"<<gcpId<<std::endl;
           std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<std::endl;
           std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<std::endl;
@@ -738,7 +737,6 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
   if(success)
     {
     std::cout<<"All GCPs within "<<ytol <<" azimuth pixel, "<<xtol<<" range pixel, "<<azTimeTol<<" s of azimuth time, "<<rangeTimeTol<<" of range time\n";
-
     }
 
   return success;
@@ -827,7 +825,7 @@ void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
     bool thisSuccess = true;
 
     // Estimate times
-    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    const bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
 
     if(s1)
       {
@@ -850,7 +848,7 @@ void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
     bool thisSuccess = true;
 
     // Estimate times
-    bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
+    const bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
 
     if(s1)
       {
