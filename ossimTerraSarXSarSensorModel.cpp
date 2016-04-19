@@ -13,12 +13,31 @@
 #include <ossim/base/ossimXmlDocument.h>
 #include "xmlTools.h"
 
+
+namespace {// Anonymous namespace
+    const ossimString attTimeUTC = "timeUTC";
+    const ossimString attPosX    = "posX";
+    const ossimString attPosY    = "posY";
+    const ossimString attPosZ    = "posZ";
+    const ossimString attVelX    = "velX";
+    const ossimString attVelY    = "velY";
+    const ossimString attVelZ    = "velZ";
+    const ossimString attT       = "t";
+    const ossimString attTau     = "tau";
+    const ossimString attCol     = "col";
+    const ossimString attRow     = "row";
+    const ossimString attLat     = "lat";
+    const ossimString attLon     = "lon";
+    const ossimString attHeight  = "height";
+}// Anonymous namespace
+
 void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::string & annotationXml, const std::string & geoXml)
 {
     ossimRefPtr<ossimXmlDocument> xmlDoc = new ossimXmlDocument(annotationXml);
+    const ossimXmlNode & xmlRoot = *xmlDoc->getRoot();
 
     //isGRD parse variant?
-    std::string product_type = xmlDoc->getRoot()->findFirstNode("productInfo/productVariantInfo/productVariant")->getText();
+    std::string const& product_type = getTextFromFirstNode(xmlRoot, "productInfo/productVariantInfo/productVariant");
 
     std::cout << "type " <<  product_type << std::endl;
 
@@ -35,24 +54,17 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
         OrbitRecordType orbitRecord;
 
         // Retrieve acquisition time
-        ossimString att1 = "timeUTC";
-        orbitRecord.azimuthTime = getTimeFromFirstNode(**itNode, att1);
+        orbitRecord.azimuthTime = getTimeFromFirstNode(**itNode, attTimeUTC);
 
         // Retrieve ECEF position
-        att1 = "posX";
-        orbitRecord.position[0] = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "posY";
-        orbitRecord.position[1] = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "posZ";
-        orbitRecord.position[2] = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        orbitRecord.position[0] = getDoubleFromFirstNode(**itNode, attPosX);
+        orbitRecord.position[1] = getDoubleFromFirstNode(**itNode, attPosY);
+        orbitRecord.position[2] = getDoubleFromFirstNode(**itNode, attPosZ);
 
         // Retrieve ECEF velocity
-        att1 = "velX";
-        orbitRecord.velocity[0] = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "velY";
-        orbitRecord.velocity[1] = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "velZ";
-        orbitRecord.velocity[2] = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        orbitRecord.velocity[0] = getDoubleFromFirstNode(**itNode, attVelX);
+        orbitRecord.velocity[1] = getDoubleFromFirstNode(**itNode, attVelY);
+        orbitRecord.velocity[2] = getDoubleFromFirstNode(**itNode, attVelZ);
 
         //Add one orbits record
         std::cout << "Add theOrbitRecords\n";
@@ -60,40 +72,40 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     }
 
     //Parse the near range time (in seconds)
-    theNearRangeTime = xmlDoc->getRoot()->findFirstNode("productInfo/sceneInfo/rangeTime/firstPixel")->getText().toDouble();
+    theNearRangeTime = getDoubleFromFirstNode(xmlRoot, "productInfo/sceneInfo/rangeTime/firstPixel");
 
     std::cout << "theNearRangeTime " << theNearRangeTime << std::endl;
 
     //Parse the range sampling rate
-    theRangeSamplingRate = xmlDoc->getRoot()->findFirstNode("instrument/settings/RSF")->getText().toDouble();
+    theRangeSamplingRate = getDoubleFromFirstNode(xmlRoot, "instrument/settings/RSF");
 
     std::cout << "theRangeSamplingRate " << theRangeSamplingRate << std::endl;
 
     //Parse the range resolution
-    theRangeResolution = xmlDoc->getRoot()->findFirstNode("productSpecific/complexImageInfo/slantRangeResolution")->getText().toDouble();
+    theRangeResolution = getDoubleFromFirstNode(xmlRoot, "productSpecific/complexImageInfo/slantRangeResolution");
 
     std::cout << "theRangeResolution " << theRangeResolution << std::endl;
 
     //Parse the radar frequency
-    theRadarFrequency = xmlDoc->getRoot()->findFirstNode("instrument/settings/settingRecord/PRF")->getText().toDouble();
+    theRadarFrequency = getDoubleFromFirstNode(xmlRoot, "instrument/settings/settingRecord/PRF");
 
     std::cout << "theRadarFrequency " << theRadarFrequency << std::endl;
 
     //Manage only strip map product for now (one burst)
 
     //Parse azimuth time start/stop
-    const TimeType azimuthTimeStart = getTimeFromFirstNode(*xmlDoc->getRoot(), "productInfo/sceneInfo/start/timeUTC");
+    const TimeType azimuthTimeStart = getTimeFromFirstNode(xmlRoot, "productInfo/sceneInfo/start/timeUTC");
 
     std::cout << "azimuthTimeStart " << azimuthTimeStart << std::endl;
 
-    const TimeType azimuthTimeStop = getTimeFromFirstNode(*xmlDoc->getRoot(), "productInfo/sceneInfo/stop/timeUTC");
+    const TimeType azimuthTimeStop = getTimeFromFirstNode(xmlRoot, "productInfo/sceneInfo/stop/timeUTC");
 
     std::cout << "azimuthTimeStop " << azimuthTimeStop << std::endl;
 
     const double td = (azimuthTimeStop - azimuthTimeStart).total_microseconds();
 
     // numberOfRows
-    unsigned int numberOfRows = xmlDoc->getRoot()->findFirstNode("productInfo/imageDataInfo/imageRaster/numberOfRows")->getText().toUInt16();
+    unsigned int numberOfRows = xmlRoot.findFirstNode("productInfo/imageDataInfo/imageRaster/numberOfRows")->getText().toUInt16();
 
     std::cout << "numberOfRows " << numberOfRows << std::endl;
 
@@ -128,7 +140,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
         //Read  coefficients
         xnodes.clear();
 
-        const unsigned int polynomialDegree = xmlDoc->getRoot()->findFirstNode("productSpecific/projectedImageInfo/slantToGroundRangeProjection/polynomialDegree")->getText().toUInt16();
+        const unsigned int polynomialDegree = xmlRoot.findFirstNode("productSpecific/projectedImageInfo/slantToGroundRangeProjection/polynomialDegree")->getText().toUInt16();
 
         std::cout << "Number of coefficients " << polynomialDegree << std::endl;
 
@@ -145,8 +157,9 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
                 if (xnodes[i].valid())
                 {
                     xnodes[i]->getAttributeValue(s, EXP);
-                    coordRecord.coefs.push_back(xnodes[i]->getText().toDouble());
-                    std::cout << "Coef number " << i << " value: " << xnodes[i]->getText().toDouble() << std::endl;
+                    const double coeff = xnodes[i]->getText().toDouble();
+                    coordRecord.coefs.push_back(coeff);
+                    std::cout << "Coef number " << i << " value: " << coeff << std::endl;
                 }
             }
         }
@@ -168,27 +181,20 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
         GCPRecordType gcpRecord;
 
         // Get delta acquisition time
-        ossimString att1 = "t";
-        const double deltaAzimuth = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        const double deltaAzimuth = getDoubleFromFirstNode(**itNode, attT);
         gcpRecord.azimuthTime = azimuthTimeStart + boost::posix_time::microseconds(deltaAzimuth * 1000000);
 
         //Get delta range time
-        att1 = "tau";
-        gcpRecord.slantRangeTime = theNearRangeTime + (*itNode)->findFirstNode(att1)->getText().toDouble();
+        gcpRecord.slantRangeTime = theNearRangeTime + getDoubleFromFirstNode(**itNode, attTau);
 
-        att1 = "col";
-        gcpRecord.imPt.x = (*itNode)->findFirstNode(att1)->getText().toDouble() - 1.;
+        gcpRecord.imPt.x = getDoubleFromFirstNode(**itNode, attCol) - 1.;
 
-        att1 = "row";
-        gcpRecord.imPt.y = (*itNode)->findFirstNode(att1)->getText().toDouble() - 1.;
+        gcpRecord.imPt.y = getDoubleFromFirstNode(**itNode, attRow) - 1.;
 
         ossimGpt geoPoint;
-        att1 = "lat";
-        gcpRecord.worldPt.lat = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "lon";
-        gcpRecord.worldPt.lon = (*itNode)->findFirstNode(att1)->getText().toDouble();
-        att1 = "height";
-        gcpRecord.worldPt.hgt = (*itNode)->findFirstNode(att1)->getText().toDouble();
+        gcpRecord.worldPt.lat = getDoubleFromFirstNode(**itNode, attLat);
+        gcpRecord.worldPt.lon = getDoubleFromFirstNode(**itNode, attLon);
+        gcpRecord.worldPt.hgt = getDoubleFromFirstNode(**itNode, attHeight);
 
         theGCPRecords.push_back(gcpRecord);
     }

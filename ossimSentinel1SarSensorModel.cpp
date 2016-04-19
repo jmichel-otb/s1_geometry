@@ -40,13 +40,14 @@ namespace ossimplugins
 void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annotationXml)
 {
     ossimRefPtr<ossimXmlDocument> xmlDoc = new ossimXmlDocument(annotationXml);
+    const ossimXmlNode & xmlRoot = *xmlDoc->getRoot();
 
     //Parse specific metadata for Sentinel1
     //TODO add as members to the Sentinel1SarSensorModel
-    const std::string product_type = xmlDoc->getRoot()->findFirstNode("adsHeader/productType")->getText();
-    const std::string mode         = xmlDoc->getRoot()->findFirstNode("adsHeader/mode")->getText();
-    const std::string swath        = xmlDoc->getRoot()->findFirstNode("adsHeader/swath")->getText();
-    const std::string polarisation = xmlDoc->getRoot()->findFirstNode("adsHeader/polarisation")->getText();
+    const std::string & product_type = getTextFromFirstNode(xmlRoot, "adsHeader/productType");
+    const std::string & mode         = getTextFromFirstNode(xmlRoot, "adsHeader/mode");
+    const std::string & swath        = getTextFromFirstNode(xmlRoot, "adsHeader/swath");
+    const std::string & polarisation = getTextFromFirstNode(xmlRoot, "adsHeader/polarisation");
 
     isGRD = (product_type == "GRD");
 
@@ -81,19 +82,19 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
     }
 
     //Parse the near range time (in seconds)
-    theNearRangeTime = getDoubleFromFirstNode(*xmlDoc->getRoot(), "imageAnnotation/imageInformation/slantRangeTime");;
+    theNearRangeTime = getDoubleFromFirstNode(xmlRoot, "imageAnnotation/imageInformation/slantRangeTime");;
 
     //Parse the range sampling rate
-    theRangeSamplingRate = getDoubleFromFirstNode(*xmlDoc->getRoot(), "generalAnnotation/productInformation/rangeSamplingRate");;
+    theRangeSamplingRate = getDoubleFromFirstNode(xmlRoot, "generalAnnotation/productInformation/rangeSamplingRate");;
 
     //Parse the range resolution
-    theRangeResolution = getDoubleFromFirstNode(*xmlDoc->getRoot(), "imageAnnotation/imageInformation/rangePixelSpacing");;
+    theRangeResolution = getDoubleFromFirstNode(xmlRoot, "imageAnnotation/imageInformation/rangePixelSpacing");;
 
     //Parse the radar frequency
-    theRadarFrequency = getDoubleFromFirstNode(*xmlDoc->getRoot(), "generalAnnotation/productInformation/radarFrequency");;
+    theRadarFrequency = getDoubleFromFirstNode(xmlRoot, "generalAnnotation/productInformation/radarFrequency");;
 
     //Parse azimuth time interval
-    theAzimuthTimeInterval = getDoubleFromFirstNode(*xmlDoc->getRoot(), "imageAnnotation/imageInformation/azimuthTimeInterval")*1000000;
+    theAzimuthTimeInterval = getDoubleFromFirstNode(xmlRoot, "imageAnnotation/imageInformation/azimuthTimeInterval")*1000000;
 
 
     // Now read burst records as well
@@ -105,18 +106,18 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         BurstRecordType burstRecord;
 
         burstRecord.startLine = 0;
-        burstRecord.azimuthStartTime = getTimeFromFirstNode(*xmlDoc->getRoot(),"imageAnnotation/imageInformation/productFirstLineUtcTime");
+        burstRecord.azimuthStartTime = getTimeFromFirstNode(xmlRoot,"imageAnnotation/imageInformation/productFirstLineUtcTime");
 
         std::cout<< burstRecord.azimuthStartTime<<std::endl;
 
-        burstRecord.azimuthStopTime = getTimeFromFirstNode(*xmlDoc->getRoot(),"imageAnnotation/imageInformation/productLastLineUtcTime");
-        burstRecord.endLine = xmlDoc->getRoot()->findFirstNode("imageAnnotation/imageInformation/numberOfLines")->getText().toUInt16()-1;
+        burstRecord.azimuthStopTime = getTimeFromFirstNode(xmlRoot,"imageAnnotation/imageInformation/productLastLineUtcTime");
+        burstRecord.endLine = getTextFromFirstNode(xmlRoot, "imageAnnotation/imageInformation/numberOfLines").toUInt16()-1;
 
         theBurstRecords.push_back(burstRecord);
     }
     else
     {
-        unsigned int linesPerBurst = xmlDoc->getRoot()->findFirstNode("swathTiming/linesPerBurst")->getText().toUInt16();
+        unsigned int linesPerBurst = xmlRoot.findFirstNode("swathTiming/linesPerBurst")->getText().toUInt16();
         unsigned int burstId(0);
 
         for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode,++burstId)
@@ -125,7 +126,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
             const ossimSarSensorModel::TimeType azTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
 
-            ossimString const& s = (*itNode)->findFirstNode(attFirstValidSample)->getText();
+            ossimString const& s = getTextFromFirstNode(**itNode, attFirstValidSample);
 
             long first_valid(0), last_valid(0);
             bool begin_found(false), end_found(false);
@@ -185,7 +186,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
             coordRecord.rg0 = getDoubleFromFirstNode(**itNode, attSr0);;
 
-            ossimString s = (*itNode)->findFirstNode(attSrgrCoefficients)->getText();
+            ossimString const& s = getTextFromFirstNode(**itNode, attSrgrCoefficients);
             std::vector<ossimString> ssplit = s.split(" ");
 
             for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
@@ -211,7 +212,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
             coordRecord.rg0 = getDoubleFromFirstNode(**itNode, attGr0);
 
-            ossimString s = (*itNode)->findFirstNode(attGrsrCoefficients)->getText();
+            ossimString const& s = getTextFromFirstNode(**itNode, attGrsrCoefficients);
             std::vector<ossimString> ssplit = s.split(" ");
 
             for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()

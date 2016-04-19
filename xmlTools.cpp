@@ -36,7 +36,7 @@ ossimplugins::TimeType ossimplugins::getTimeFromFirstNode(ossimXmlNode const& no
 
 double ossimplugins::getDoubleFromFirstNode(ossimXmlNode const& node, ossimString const& xpath)
 {
-    const ossimString s = getTextFromFirstNode(node, xpath);
+    const ossimString & s = getTextFromFirstNode(node, xpath);
     return s.toDouble();
 }
 
