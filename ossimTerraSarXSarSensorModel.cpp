@@ -39,7 +39,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     //isGRD parse variant?
     std::string const& product_type = getTextFromFirstNode(xmlRoot, "productInfo/productVariantInfo/productVariant");
 
-    std::cout << "type " <<  product_type << std::endl;
+    std::cout << "type " <<  product_type << '\n';
 
     isGRD = (product_type == "MGD" || product_type == "GEC" || product_type == "EEC");
 
@@ -47,7 +47,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     std::vector<ossimRefPtr<ossimXmlNode> > xnodes;
     xmlDoc->findNodes("/level1Product/platform/orbit/stateVec",xnodes);
 
-    std::cout << "Number of states " << xnodes.size() << std::endl;
+    std::cout << "Number of states " << xnodes.size() << '\n';
 
     for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
     {
@@ -74,45 +74,45 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
     //Parse the near range time (in seconds)
     theNearRangeTime = getDoubleFromFirstNode(xmlRoot, "productInfo/sceneInfo/rangeTime/firstPixel");
 
-    std::cout << "theNearRangeTime " << theNearRangeTime << std::endl;
+    std::cout << "theNearRangeTime " << theNearRangeTime << '\n';
 
     //Parse the range sampling rate
     theRangeSamplingRate = getDoubleFromFirstNode(xmlRoot, "instrument/settings/RSF");
 
-    std::cout << "theRangeSamplingRate " << theRangeSamplingRate << std::endl;
+    std::cout << "theRangeSamplingRate " << theRangeSamplingRate << '\n';
 
     //Parse the range resolution
     theRangeResolution = getDoubleFromFirstNode(xmlRoot, "productSpecific/complexImageInfo/slantRangeResolution");
 
-    std::cout << "theRangeResolution " << theRangeResolution << std::endl;
+    std::cout << "theRangeResolution " << theRangeResolution << '\n';
 
     //Parse the radar frequency
     theRadarFrequency = getDoubleFromFirstNode(xmlRoot, "instrument/settings/settingRecord/PRF");
 
-    std::cout << "theRadarFrequency " << theRadarFrequency << std::endl;
+    std::cout << "theRadarFrequency " << theRadarFrequency << '\n';
 
     //Manage only strip map product for now (one burst)
 
     //Parse azimuth time start/stop
     const TimeType azimuthTimeStart = getTimeFromFirstNode(xmlRoot, "productInfo/sceneInfo/start/timeUTC");
 
-    std::cout << "azimuthTimeStart " << azimuthTimeStart << std::endl;
+    std::cout << "azimuthTimeStart " << azimuthTimeStart << '\n';
 
     const TimeType azimuthTimeStop = getTimeFromFirstNode(xmlRoot, "productInfo/sceneInfo/stop/timeUTC");
 
-    std::cout << "azimuthTimeStop " << azimuthTimeStop << std::endl;
+    std::cout << "azimuthTimeStop " << azimuthTimeStop << '\n';
 
     const double td = (azimuthTimeStop - azimuthTimeStart).total_microseconds();
 
     // numberOfRows
     unsigned int numberOfRows = xmlRoot.findFirstNode("productInfo/imageDataInfo/imageRaster/numberOfRows")->getText().toUInt16();
 
-    std::cout << "numberOfRows " << numberOfRows << std::endl;
+    std::cout << "numberOfRows " << numberOfRows << '\n';
 
     //Compute azimuth time interval
     theAzimuthTimeInterval = td / static_cast<double> (numberOfRows);
 
-    std::cout << "theAzimuthTimeInterval " << theAzimuthTimeInterval  << " and 1/prf: " << (1 / theRadarFrequency) * 1000000 << std::endl;
+    std::cout << "theAzimuthTimeInterval " << theAzimuthTimeInterval  << " and 1/prf: " << (1 / theRadarFrequency) * 1000000 << '\n';
 
     //For Terrasar-X only 1 burst is supported for now
     BurstRecordType burstRecord;
@@ -142,7 +142,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
 
         const unsigned int polynomialDegree = xmlRoot.findFirstNode("productSpecific/projectedImageInfo/slantToGroundRangeProjection/polynomialDegree")->getText().toUInt16();
 
-        std::cout << "Number of coefficients " << polynomialDegree << std::endl;
+        std::cout << "Number of coefficients " << polynomialDegree << '\n';
 
         ossimString path = "/level1Product/productSpecific/projectedImageInfo/slantToGroundRangeProjection/coefficient";
         const ossimString EXP = "exponent";
@@ -159,7 +159,7 @@ void ossimplugins::ossimTerraSarXSarSensorModel::readAnnotationFile(const std::s
                     xnodes[i]->getAttributeValue(s, EXP);
                     const double coeff = xnodes[i]->getText().toDouble();
                     coordRecord.coefs.push_back(coeff);
-                    std::cout << "Coef number " << i << " value: " << coeff << std::endl;
+                    std::cout << "Coef number " << i << " value: " << coeff << '\n';
                 }
             }
         }

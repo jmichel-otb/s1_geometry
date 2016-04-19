@@ -108,7 +108,7 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
         burstRecord.startLine = 0;
         burstRecord.azimuthStartTime = getTimeFromFirstNode(xmlRoot,"imageAnnotation/imageInformation/productFirstLineUtcTime");
 
-        std::cout<< burstRecord.azimuthStartTime<<std::endl;
+        std::cout<< burstRecord.azimuthStartTime<<'\n';
 
         burstRecord.azimuthStopTime = getTimeFromFirstNode(xmlRoot,"imageAnnotation/imageInformation/productLastLineUtcTime");
         burstRecord.endLine = getTextFromFirstNode(xmlRoot, "imageAnnotation/imageInformation/numberOfLines").toUInt16()-1;

@@ -12,6 +12,10 @@
 #include <ossimSarSensorModel.h>
 #include <ossim/base/ossimLsrSpace.h>
 
+namespace {// Anonymous namespace
+    const bool k_verbose = false; // global verbose constant; TODO: use an option
+}// Anonymous namespace
+
 namespace ossimplugins
 {
 
@@ -386,7 +390,6 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
 {
   assert(!theOrbitRecords.empty()&&"Orbit records vector is empty()");
 
-
   std::vector<OrbitRecordType>::const_iterator it = theOrbitRecords.begin();
 
   double doppler2(0.);
@@ -597,14 +600,14 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
     if(init)
       init =false;
 
-    // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<std::endl;
+    // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<'\n';
 
     // compute residuals
     F(1) = target.x - currentImPoint.x;
     F(2) = target.y - currentImPoint.y;
     F(3) = currentHeightResidual;
 
-    // std::cout<<"F("<<iter<<")="<<F<<std::endl;
+    // std::cout<<"F("<<iter<<")="<<F<<'\n';
 
     // Delta use for partial derivatives estimation (in meters)
     double d = 10.;
@@ -641,7 +644,7 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
                                               p_fy[0], p_fy[1], p_fy[2],
                                               p_fh[0], p_fh[1], p_fh[2]);
 
-    // std::cout<<"B: "<<B<<std::endl;
+    // std::cout<<"B: "<<B<<'\n';
 
     // Invert system
     dR = B.i() * F;
@@ -652,7 +655,7 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
       currentEstimation[k] -= dR(k+1);
       }
 
-    // std::cout<<"dR: "<<dR<<std::endl;
+    // std::cout<<"dR: "<<dR<<'\n';
 
     currentEstimationWorld=ossimGpt(currentEstimation);
 
@@ -663,14 +666,14 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
     ossimDpt newImPoint;
     worldToLineSample(currentEstimationWorld,currentImPoint);
 
-    // std::cout<<currentImPoint<<std::endl;
+    // std::cout<<currentImPoint<<'\n';
 
     currentImResidual = (currentImPoint-target).length();
 
     ++iter;
     }
 
-  // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<std::endl;
+  // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<'\n';
 
   ellPt = currentEstimation;
   return true;
@@ -707,7 +710,6 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
       TimeType estimatedAzimuthTime;
       double   estimatedRangeTime;
 
-
       // Estimate times
       const bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
       this->worldToLineSample(gcpIt->worldPt,estimatedImPt);
@@ -720,17 +722,17 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
           && (std::abs(estimatedRangeTime - gcpIt->slantRangeTime) <= rangeTimeTol)
           ;
 
-      const bool verbose = true;
+      const bool verbose = k_verbose;
 
       success = success && thisSuccess;
 
       if(verbose)
       {
-          std::cout<<"GCP #"<<gcpId<<std::endl;
-          std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<std::endl;
-          std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<std::endl;
-          std::cout<<"Image point: ref="<<gcpIt->imPt<<", predicted="<<estimatedImPt<<", res="<<estimatedImPt-gcpIt->imPt<<std::endl;
-          std::cout<<std::endl;
+          std::cout<<"GCP #"<<gcpId<<'\n';
+          std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<'\n';
+          std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<'\n';
+          std::cout<<"Image point: ref="<<gcpIt->imPt<<", predicted="<<estimatedImPt<<", res="<<estimatedImPt-gcpIt->imPt<<'\n';
+          std::cout<<'\n';
       }
   }
 
@@ -770,7 +772,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
   theGCPRecords.swap(refGcps);
 
   bool success = true;
-  bool verbose = true;
+  const bool verbose = k_verbose;
 
   unsigned int gcpId = 1;
 
@@ -794,12 +796,12 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
 
       if(verbose)
         {
-        std::cout<<"GCP #"<<gcpId<<std::endl;
-        std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<std::endl;
-        std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<std::endl;
-        std::cout<<"Im point: "<<gcpIt->imPt<<std::endl;
+        std::cout<<"GCP #"<<gcpId<<'\n';
+        std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<'\n';
+        std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<'\n';
+        std::cout<<"Im point: "<<gcpIt->imPt<<'\n';
         std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<res<<" m\n";
-        std::cout<<std::endl;
+        std::cout<<'\n';
         }
       }
     }
