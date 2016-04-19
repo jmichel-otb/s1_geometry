@@ -516,8 +516,8 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
       }
     }
 
-  DurationType timeSinceStart = azimuthTime - currentBurst->azimuthStartTime;
-  double timeSinceStartInMicroSeconds = static_cast<double>(timeSinceStart.total_microseconds());
+  const DurationType timeSinceStart = azimuthTime - currentBurst->azimuthStartTime;
+  const double timeSinceStartInMicroSeconds = static_cast<double>(timeSinceStart.total_microseconds());
 
   // Eq 22 p 27
   line = (timeSinceStartInMicroSeconds/theAzimuthTimeInterval) + currentBurst->startLine;
@@ -563,10 +563,10 @@ void ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
 
     }
 
-  double timeSinceStartInMicroSeconds = (line - currentBurst->startLine)*theAzimuthTimeInterval;
+    const double timeSinceStartInMicroSeconds = (line - currentBurst->startLine)*theAzimuthTimeInterval;
 
-  DurationType timeSinceStart = boost::posix_time::microseconds(timeSinceStartInMicroSeconds);
-  DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
+    const DurationType timeSinceStart = boost::posix_time::microseconds(timeSinceStartInMicroSeconds);
+    const DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
   // Eq 22 p 27
   azimuthTime = currentBurst->azimuthStartTime + timeSinceStart + offset;
 }
@@ -610,18 +610,16 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
     // std::cout<<"F("<<iter<<")="<<F<<'\n';
 
     // Delta use for partial derivatives estimation (in meters)
-    double d = 10.;
+    const double d = 10.;
 
     // Compute partial derivatives
     ossimEcefVector p_fx, p_fy, p_fh,dx(d,0,0),dy(0,d,0),dz(0,0,d);
     ossimDpt tmpImPt;
-    ossimGpt tmpGpt;
-    double tmpHgt;
 
     ossim_float64 rdx,rdy,rdz, fdx,fdy,fdz;
 
     ossimGpt currentEstimationWorld(currentEstimation);
-    tmpGpt = ossimGpt(currentEstimation+dx);
+    ossimGpt tmpGpt = ossimGpt(currentEstimation+dx);
     worldToLineSample(tmpGpt,tmpImPt);
     p_fx[0] = (currentImPoint.x-tmpImPt.x)/d;
     p_fy[0] = (currentImPoint.y-tmpImPt.y)/d;
@@ -660,7 +658,7 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
     currentEstimationWorld=ossimGpt(currentEstimation);
 
     // Update residuals
-    ossim_float64 atHgt = hgtRef->getRefHeight(currentEstimationWorld);
+    const ossim_float64 atHgt = hgtRef->getRefHeight(currentEstimationWorld);
     currentHeightResidual = atHgt - currentEstimationWorld.height();
 
     ossimDpt newImPoint;
@@ -779,7 +777,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
   for(std::vector<GCPRecordType>::const_iterator gcpIt = testGcps.begin(); gcpIt!=testGcps.end();++gcpIt,++gcpId)
     {
     ossimGpt estimatedWorldPt;
-    ossimGpt refPt = gcpIt->worldPt;
+    const ossimGpt refPt = gcpIt->worldPt;
 
     double estimatedRangeTime;
     TimeType estimatedAzimuthTime;
@@ -788,7 +786,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
 
     lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
 
-    double res = refPt.distanceTo(estimatedWorldPt);
+    const double res = refPt.distanceTo(estimatedWorldPt);
 
     if(res>resTol || estimatedWorldPt.hasNans())
       {
