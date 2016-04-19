@@ -19,7 +19,7 @@ endif()
 
 
 # s1_inversemodel
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${OSSIM_INCLUDE_DIR})
 
 add_executable(s1_inversemodel
     s1_inversemodel.cpp ossimSarSensorModel.cpp
