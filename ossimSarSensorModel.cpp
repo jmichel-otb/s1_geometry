@@ -59,9 +59,8 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
   double distance2 = squareDistance(imPt, theGCPRecords.front().imPt);
 
   std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
-
-  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
-      gcpIt!=theGCPRecords.end();++gcpIt)
+  std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
+  for(++gcpIt;gcpIt!=theGCPRecords.end();++gcpIt)
     {
     const double currentDistance2 = squareDistance(imPt, gcpIt->imPt);
 
@@ -150,6 +149,8 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
     slantRangeToGroundRange(rangeTime*C/2,azimuthTime,groundRange);
 
     // Eq 32 p. 31
+    // TODO: possible micro-optimization: precompute 1/theRangeResolution, and
+    // use *
     imPt.x = groundRange/theRangeResolution;
     }
   else
@@ -175,6 +176,7 @@ bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeT
 
   if(!success)
     {
+    // TODO: check whether we could throw instead
     return false;
     }
 
@@ -334,17 +336,15 @@ void ossimSarSensorModel::applyCoordinateConversion(const double & in, const Tim
 
     std::vector<CoordinateConversionRecordType>::const_iterator nextRecord = it;
 
-    bool found = false;
-
     // Look for the correct record
-    while(it!=records.end() && !found)
+    while(it!=records.end())
     {
-        nextRecord = it;
+        // nextRecord = it;
 
         if(azimuthTime >= previousRecord->azimuthTime
                 && azimuthTime < nextRecord->azimuthTime)
         {
-            found = true;
+            break;
         }
         else
         {
@@ -353,7 +353,8 @@ void ossimSarSensorModel::applyCoordinateConversion(const double & in, const Tim
             nextRecord = it;
         }
     }
-    if(!found)
+    assert(nextRecord != records.end());
+    if(it == records.end())
     {
         if(azimuthTime < records.front().azimuthTime)
         {
@@ -418,7 +419,6 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
   std::vector<OrbitRecordType>::const_iterator record1 = it;
 
   bool dopplerSign1 = doppler1 < 0;
-  bool found = false;
 
   ++it;
 
@@ -426,7 +426,7 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
 
   // Look for the consecutive records where doppler freq changes sign
   // Note: implementing a bisection algorithm here might be faster
-  while(it!=theOrbitRecords.end() && !found)
+  for ( ; it!=theOrbitRecords.end() ; ++it)
   {
       record2 = it;
 
@@ -438,7 +438,7 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
       // If a change of sign is detected
       if(dopplerSign1 != dopplerSign2)
       {
-          found = true;
+          break;
       }
       else
       {
@@ -450,7 +450,7 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
 
   // If not found, pass error to caller (not a programming error, but
   // eronous input parameters
-  if(!found)
+  if(it == theOrbitRecords.end())
     {
     return false;
     }
@@ -494,27 +494,27 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
 
   std::vector<BurstRecordType>::const_iterator currentBurst = theBurstRecords.begin();
 
-  bool burstFound(false);
-
   // Look for the correct burst. In most cases the number of burst
   // records will be 1 (except for TOPSAR Sentinel1 products)
-  for(std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin(); it!= theBurstRecords.end() && !burstFound; ++it)
+  std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin();
+  std::vector<BurstRecordType>::const_iterator itend = theBurstRecords.end();
+  for(; it!= itend ; ++it)
     {
 
     if(azimuthTime >= it->azimuthStartTime
        && azimuthTime < it->azimuthStopTime)
       {
-      burstFound = true;
       currentBurst = it;
+      break;
       }
     }
 
   // If no burst is found, we will use the first (resp. last burst to
   // extrapolate line
-  if(!burstFound)
+  if(it == itend)
     {
 
-    if(theBurstRecords.size()>1)
+    if(! theBurstRecords.empty())
       {
       if(azimuthTime < theBurstRecords.front().azimuthStartTime)
         {
@@ -541,41 +541,36 @@ void ossimSarSensorModel::azimuthTimeToLine(const TimeType & azimuthTime, double
 
 void ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azimuthTime) const
 {
-  assert(!theBurstRecords.empty()&&"Burst records are empty (at least one burst should be available)");
+    assert(!theBurstRecords.empty()&&"Burst records are empty (at least one burst should be available)");
 
-  std::vector<BurstRecordType>::const_iterator currentBurst = theBurstRecords.begin();
+    std::vector<BurstRecordType>::const_iterator currentBurst = theBurstRecords.begin();
 
-  bool burstFound(false);
-
-  if(theBurstRecords.size() == 1)
+    if(theBurstRecords.size() != 1)
     {
-    burstFound = true;
-    }
-  else
-    {
-    // Look for the correct burst. In most cases the number of burst
-    // records will be 1 (except for TOPSAR Sentinel1 products)
-    for(std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin(); it!= theBurstRecords.end() && !burstFound; ++it)
-      {
-      if(line >= it->startLine
-         && line < it->endLine)
+        // Look for the correct burst. In most cases the number of burst
+        // records will be 1 (except for TOPSAR Sentinel1 products)
+        std::vector<BurstRecordType>::const_iterator it = theBurstRecords.begin();
+        std::vector<BurstRecordType>::const_iterator itend = theBurstRecords.end();
+        for( ; it!= itend; ++it)
         {
-        burstFound = true;
-        currentBurst = it;
+            if(line >= it->startLine && line < it->endLine)
+            {
+                currentBurst = it;
+                break;
+            }
         }
-      }
 
-    if(!burstFound)
-      {
-      if(line < theBurstRecords.front().startLine)
+        if(it == itend)
         {
-        currentBurst = theBurstRecords.begin();
+            if(line < theBurstRecords.front().startLine)
+            {
+                currentBurst = theBurstRecords.begin();
+            }
+            else if (line >= theBurstRecords.back().endLine)
+            {
+                currentBurst = theBurstRecords.end()-1;
+            }
         }
-      else if (line >= theBurstRecords.back().endLine)
-        {
-        currentBurst = theBurstRecords.end()-1;
-        }
-      }
 
     }
 
@@ -583,8 +578,8 @@ void ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
 
     const DurationType timeSinceStart = boost::posix_time::microseconds(timeSinceStartInMicroSeconds);
     const DurationType offset = boost::posix_time::microseconds(static_cast<unsigned long>(floor(theAzimuthTimeOffset+0.5)));
-  // Eq 22 p 27
-  azimuthTime = currentBurst->azimuthStartTime + timeSinceStart + offset;
+    // Eq 22 p 27
+    azimuthTime = currentBurst->azimuthStartTime + timeSinceStart + offset;
 }
 
 
