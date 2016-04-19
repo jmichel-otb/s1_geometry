@@ -14,6 +14,21 @@
 
 namespace {// Anonymous namespace
     const bool k_verbose = false; // global verbose constant; TODO: use an option
+
+    // Sometimes, we don't need to compare the actual distance, its square value is
+    // more than enough.
+    inline double squareDistance(ossimDpt const& lhs, ossimDpt const& rhs) {
+        const double dx = lhs.x - rhs.x;
+        const double dy = lhs.y - rhs.y;
+        return dx*dx + dy*dy;
+    }
+
+    inline double squareDistance(ossimGpt const& lhs, ossimGpt const& rhs) {
+        const ossimEcefPoint l(lhs);
+        const ossimEcefPoint r(rhs);
+        return (l-r).norm2();
+    }
+
 }// Anonymous namespace
 
 namespace ossimplugins
@@ -41,18 +56,18 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
   assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
 
   // Find the closest GCP
-  double distance = (imPt-theGCPRecords.front().imPt).length();
+  double distance2 = squareDistance(imPt, theGCPRecords.front().imPt);
 
   std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
 
   for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
       gcpIt!=theGCPRecords.end();++gcpIt)
     {
-    const double currentDistance = (imPt-gcpIt->imPt).length();
+    const double currentDistance2 = squareDistance(imPt, gcpIt->imPt);
 
-    if(currentDistance < distance)
+    if(currentDistance2 < distance2)
       {
-      distance = currentDistance;
+      distance2 = currentDistance2;
       refGcp = gcpIt;
       }
     }
@@ -441,11 +456,12 @@ bool ossimSarSensorModel::zeroDopplerLookup(const ossimEcefPoint & inputPt, Time
     }
 
   // now interpolate time and sensor position
-  const double interpDenom = std::abs(doppler1)+std::abs(doppler2);
+  const double abs_doppler1 = std::abs(doppler1);
+  const double interpDenom = abs_doppler1+std::abs(doppler2);
 
   assert(interpDenom>0&&"Both doppler frequency are null in interpolation weight computation");
 
-  const double interp = std::abs(doppler1)/interpDenom;
+  const double interp = abs_doppler1/interpDenom;
 
   // Note that microsecond precision is used here
   const DurationType delta_td = record2->azimuthTime - record1->azimuthTime;
@@ -742,9 +758,9 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
   return success;
 }
 
-
-bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
+bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(double resTol)
 {
+  resTol *= resTol;
 
   // First, split half of the gcps to serve as tests, and remove them
   // temporarily from theGCPRecord.
@@ -786,7 +802,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
 
     lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
 
-    const double res = refPt.distanceTo(estimatedWorldPt);
+    const double res = squareDistance(refPt, estimatedWorldPt);
 
     if(res>resTol || estimatedWorldPt.hasNans())
       {
@@ -798,7 +814,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(const double& resTol)
         std::cout<<"Azimuth time: ref="<<gcpIt->azimuthTime<<", predicted: "<<estimatedAzimuthTime<<", res="<<boost::posix_time::to_simple_string(estimatedAzimuthTime-gcpIt->azimuthTime)<<'\n';
         std::cout<<"Slant range time: ref="<<gcpIt->slantRangeTime<<", predicted: "<<estimatedRangeTime<<", res="<<std::abs(estimatedRangeTime - gcpIt->slantRangeTime)<<'\n';
         std::cout<<"Im point: "<<gcpIt->imPt<<'\n';
-        std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<res<<" m\n";
+        std::cout<<"World point: ref="<<refPt<<", predicted="<<estimatedWorldPt<<", res="<<sqrt(res)<<" m\n";
         std::cout<<'\n';
         }
       }
@@ -822,8 +838,6 @@ void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
     TimeType estimatedAzimuthTime;
     double   estimatedRangeTime;
 
-    bool thisSuccess = true;
-
     // Estimate times
     const bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
 
@@ -844,8 +858,6 @@ void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
     ossimDpt estimatedImPt;
     TimeType estimatedAzimuthTime;
     double   estimatedRangeTime;
-
-    bool thisSuccess = true;
 
     // Estimate times
     const bool s1 = this->worldToAzimuthRangeTime(gcpIt->worldPt,estimatedAzimuthTime,estimatedRangeTime);
