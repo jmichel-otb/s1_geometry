@@ -29,6 +29,39 @@ namespace {// Anonymous namespace
         return (l-r).norm2();
     }
 
+    template <typename Container>
+    inline void unzip(Container const& in, Container& out_even, Container& out_odd)
+    {
+        typedef typename Container::const_iterator const_iterator;
+        typedef typename Container::size_type      size_type;
+
+        const size_type size                         = in.size();
+        const bool      has_a_odd_number_of_elements = size % 2 == 1;
+
+        out_even.reserve(size/2+1);
+        out_odd.reserve(size/2);
+
+        const_iterator end = in.end();
+        if (has_a_odd_number_of_elements)
+        {
+            std::advance(end, -1);
+        }
+        for (const_iterator it=in.begin(); it != end ; )
+        {
+            out_even.push_back(*it++);
+            out_odd.push_back(*it++);
+        }
+        if (has_a_odd_number_of_elements)
+        {
+            assert(end != in.end());
+            out_even.push_back(*end);
+        }
+        assert(out_even.size() >= out_odd.size());
+        assert(out_odd.capacity() == size/2); // The correct number of element have been reserved
+        assert(out_even.capacity() == size/2+1); // The correct number of element have been reserved
+        assert(out_odd.size() + out_even.size() == size);
+    }
+
 }// Anonymous namespace
 
 namespace ossimplugins
@@ -52,7 +85,8 @@ ossimSarSensorModel::ossimSarSensorModel()
     theRangeTimeOffset(0)
 {}
 
-void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightAboveEllipsoid, ossimGpt& worldPt) const
+ossimSarSensorModel::GCPRecordType const&
+ossimSarSensorModel::findClosestGCP(ossimDpt const& imPt) const
 {
   assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
 
@@ -60,8 +94,9 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
   double distance2 = squareDistance(imPt, theGCPRecords.front().imPt);
 
   std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
-  std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
-  for(++gcpIt;gcpIt!=theGCPRecords.end();++gcpIt)
+  std::vector<GCPRecordType>::const_iterator gcpIt  = theGCPRecords.begin();
+  std::vector<GCPRecordType>::const_iterator gcpEnd = theGCPRecords.end();
+  for(++gcpIt ; gcpIt!=gcpEnd ; ++gcpIt)
     {
     const double currentDistance2 = squareDistance(imPt, gcpIt->imPt);
 
@@ -72,11 +107,21 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
       }
     }
 
+  assert(refGcp != theGCPRecords.end() && "A GCP record shall have been found!");
+  return *refGcp;
+}
+
+void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightAboveEllipsoid, ossimGpt& worldPt) const
+{
+  assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
+
+  GCPRecordType const& refGcp = findClosestGCP(imPt);
+
   // Set the height reference
   ossim_float64 hgtSet;
   if ( ossim::isnan(heightAboveEllipsoid) )
     {
-    hgtSet = refGcp->worldPt.height();
+    hgtSet = refGcp.worldPt.height();
     }
   else
     {
@@ -87,38 +132,24 @@ void ossimSarSensorModel::lineSampleHeightToWorld(const ossimDpt& imPt, const do
   ossimEcefPoint ellPt;
 
   // Simple iterative inversion of inverse model starting at closest gcp
-  projToSurface(*refGcp,imPt,&hgtRef,ellPt);
+  projToSurface(refGcp,imPt,hgtRef,ellPt);
 
   worldPt = ossimGpt(ellPt);
 }
 
-void ossimSarSensorModel::lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const
+void ossimSarSensorModel::lineSampleToWorld(ossimDpt const& imPt, ossimGpt& worldPt) const
 {
   assert(!theGCPRecords.empty()&&"theGCPRecords is empty.");
 
-  // Find the closest GCP
-  double distance = (imPt-theGCPRecords.front().imPt).length();
-
-  std::vector<GCPRecordType>::const_iterator refGcp = theGCPRecords.begin();
-
-  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin();
-      gcpIt!=theGCPRecords.end();++gcpIt)
-    {
-    if((imPt-gcpIt->imPt).length() < distance)
-      {
-      distance = (imPt-gcpIt->imPt).length();
-      refGcp = gcpIt;
-      }
-    }
-
-  const ossimGpt refPt = refGcp->worldPt;
+  GCPRecordType const& refGcp = findClosestGCP(imPt);
+  ossimGpt      const& refPt = refGcp.worldPt;
 
   const ossimHgtRef hgtRef(AT_DEM);
 
   ossimEcefPoint ellPt;
 
   // Simple iterative inversion of inverse model starting at closest gcp
-  projToSurface(*refGcp,imPt,&hgtRef,ellPt);
+  projToSurface(refGcp,imPt,hgtRef,ellPt);
 
   worldPt = ossimGpt(ellPt);
 }
@@ -160,7 +191,6 @@ void ossimSarSensorModel::worldToLineSample(const ossimGpt& worldPt, ossimDpt & 
     // Eq 23 and 24 p. 28
     imPt.x = (rangeTime - theNearRangeTime)*theRangeSamplingRate;
     }
-
 }
 
 bool ossimSarSensorModel::worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const
@@ -589,7 +619,7 @@ void ossimSarSensorModel::lineToAzimuthTime(const double & line, TimeType & azim
 
 
 
-bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellPt) const
+bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef & hgtRef, ossimEcefPoint & ellPt) const
 {
   // Initialize current estimation
   ossimEcefPoint currentEstimation(initGcp.worldPt);
@@ -598,7 +628,7 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
   ossimDpt currentImPoint(initGcp.imPt);
 
   ossim_float64 currentImSquareResidual = squareDistance(target,currentImPoint);
-  double currentHeightResidual = initGcp.worldPt.height() - hgtRef->getRefHeight(initGcp.worldPt);
+  double currentHeightResidual = initGcp.worldPt.height() - hgtRef.getRefHeight(initGcp.worldPt);
 
   bool init = true;
 
@@ -677,7 +707,7 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
     currentEstimationWorld=ossimGpt(currentEstimation);
 
     // Update residuals
-    const ossim_float64 atHgt = hgtRef->getRefHeight(currentEstimationWorld);
+    const ossim_float64 atHgt = hgtRef.getRefHeight(currentEstimationWorld);
     currentHeightResidual = atHgt - currentEstimationWorld.height();
 
     worldToLineSample(currentEstimationWorld,currentImPoint);
@@ -766,26 +796,14 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(double resTol)
 
   // First, split half of the gcps to serve as tests, and remove them
   // temporarily from theGCPRecord.
-  std::vector<GCPRecordType> gcpRecordSave, testGcps,refGcps;
+  std::vector<GCPRecordType> gcpRecordSave, testGcps;
 
   gcpRecordSave.swap(theGCPRecords); // steal the data; `gcpRecordSave = move(theGCPRecords);` in C++11
 
   unsigned int count = 0;
 
-  for(std::vector<GCPRecordType>::const_iterator gcpIt = theGCPRecords.begin(); gcpIt!=theGCPRecords.end();++gcpIt,++count)
-    {
-    if(count%2 == 0)
-      {
-      refGcps.push_back(*gcpIt);
-      }
-    else
-      {
-      testGcps.push_back(*gcpIt);
-      }
-
-    }
-
-  theGCPRecords.swap(refGcps);
+  unzip(gcpRecordSave, theGCPRecords, testGcps);
+  assert(theGCPRecords.size() >= testGcps.size());
 
   bool success = true;
   const bool verbose = k_verbose;
@@ -802,7 +820,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(double resTol)
 
     lineSampleToAzimuthRangeTime(gcpIt->imPt,estimatedAzimuthTime,estimatedRangeTime);
 
-    lineSampleHeightToWorld(gcpIt->imPt,gcpIt->worldPt.height(),estimatedWorldPt);
+    lineSampleHeightToWorld(gcpIt->imPt,refPt.height(),estimatedWorldPt);
 
     const double res = squareDistance(refPt, estimatedWorldPt);
 

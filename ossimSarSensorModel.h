@@ -208,7 +208,18 @@ protected:
 
   // TODO: document me
   /*virtual*/ // TODO: check why virtual
-  bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
+  bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef & hgtRef, ossimEcefPoint & ellpt) const;
+
+  /**
+   * Finds closest GCP.
+   *
+   * \param[in] imPt  «imPt-explanations»
+   * \return the closest GCP record to \c imPt.
+   * \throw None
+   * \pre `theGCPRecords` shall not be empty.
+   */
+  GCPRecordType const& findClosestGCP(ossimDpt const& imPt) const;
+
 
   std::vector<OrbitRecordType>                theOrbitRecords;
   std::vector<GCPRecordType>                  theGCPRecords;

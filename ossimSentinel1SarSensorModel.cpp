@@ -34,8 +34,46 @@ namespace {// Anonymous namespace
     const ossimString attZ                = "z";
 }// Anonymous namespace
 
+void ossimplugins::ossimSentinel1SarSensorModel::readCoordinates(
+        ossimXmlDocument const& xmlDoc, ossimString const& xpath,
+        ossimString const& rg0_xpath, ossimString const& coeffs_xpath,
+        std::vector<CoordinateConversionRecordType> & outputRecords)
+{
+    std::vector<ossimRefPtr<ossimXmlNode> > xnodes;
+    xmlDoc.findNodes(xpath, xnodes);
+
+    for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
+    {
+        CoordinateConversionRecordType coordRecord;
+
+        coordRecord.azimuthTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
+
+        coordRecord.rg0 = getDoubleFromFirstNode(**itNode, rg0_xpath);;
+
+        ossimString const& s = getTextFromFirstNode(**itNode, coeffs_xpath);
+        std::vector<ossimString> ssplit = s.split(" ");
+
+        if (ssplit.empty())
+        {
+            throw std::runtime_error("The "+rg0_xpath+" record has an empty coef vector");
+        }
+        for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
+                ; cIt != e
+                ; ++cIt
+            )
+        {
+            coordRecord.coefs.push_back(cIt->toDouble());
+        }
+        assert(!coordRecord.coefs.empty()&&"The rg0 record has empty coefs vector.");
+
+        outputRecords.push_back(coordRecord);
+    }
+}
+
 namespace ossimplugins
 {
+
+
 
 void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annotationXml)
 {
@@ -175,57 +213,15 @@ void ossimSentinel1SarSensorModel::readAnnotationFile(const std::string & annota
 
     if(isGRD)
     {
-        xnodes.clear();
-        xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
+        readCoordinates(*xmlDoc,
+                "/product/coordinateConversion/coordinateConversionList/coordinateConversion",
+                attSr0, attSrgrCoefficients,
+                theSlantRangeToGroundRangeRecords);
 
-        for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
-        {
-            CoordinateConversionRecordType coordRecord;
-
-            coordRecord.azimuthTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
-
-            coordRecord.rg0 = getDoubleFromFirstNode(**itNode, attSr0);;
-
-            ossimString const& s = getTextFromFirstNode(**itNode, attSrgrCoefficients);
-            std::vector<ossimString> ssplit = s.split(" ");
-
-            for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
-                    ; cIt != e
-                    ; ++cIt
-                )
-            {
-                coordRecord.coefs.push_back(cIt->toDouble());
-            }
-            assert(!coordRecord.coefs.empty()&&"The srgr record has empty coefs vector.");
-
-            theSlantRangeToGroundRangeRecords.push_back(coordRecord);
-        }
-
-        xnodes.clear();
-        xmlDoc->findNodes("/product/coordinateConversion/coordinateConversionList/coordinateConversion",xnodes);
-
-        for(std::vector<ossimRefPtr<ossimXmlNode> >::iterator itNode = xnodes.begin(); itNode!=xnodes.end();++itNode)
-        {
-            CoordinateConversionRecordType coordRecord;
-
-            coordRecord.azimuthTime = getTimeFromFirstNode(**itNode, attAzimuthTime);
-
-            coordRecord.rg0 = getDoubleFromFirstNode(**itNode, attGr0);
-
-            ossimString const& s = getTextFromFirstNode(**itNode, attGrsrCoefficients);
-            std::vector<ossimString> ssplit = s.split(" ");
-
-            for (std::vector<ossimString>::const_iterator cIt = ssplit.begin(), e = ssplit.end()
-                    ; cIt != e
-                    ; ++cIt
-                )
-            {
-                coordRecord.coefs.push_back(cIt->toDouble());
-            }
-            assert(!coordRecord.coefs.empty()&&"The grsr record has empty coefs vector.");
-
-            theGroundRangeToSlantRangeRecords.push_back(coordRecord);
-        }
+        readCoordinates(*xmlDoc,
+                "/product/coordinateConversion/coordinateConversionList/coordinateConversion",
+                attGr0, attGrsrCoefficients,
+                theGroundRangeToSlantRangeRecords);
     }
 
     xnodes.clear();
