@@ -292,15 +292,19 @@ void ossimSarSensorModel::interpolateSensorPosVel(const TimeType & azimuthTime, 
     {
     double w = 1.;
 
-    for(unsigned int j = nBegin; j < nEnd; ++j)
+    unsigned int j = nBegin;
+    for( ; j != i ; ++j)
       {
-
-      if(j!=i)
-        {
-        const double td1 = (azimuthTime - theOrbitRecords[j].azimuthTime).total_microseconds();
-        const double td2 = (theOrbitRecords[i].azimuthTime - theOrbitRecords[j].azimuthTime).total_microseconds();
-        w*=td1/td2;
-        }
+      const double td1 = (azimuthTime - theOrbitRecords[j].azimuthTime).total_microseconds();
+      const double td2 = (theOrbitRecords[i].azimuthTime - theOrbitRecords[j].azimuthTime).total_microseconds();
+      w*=td1/td2;
+      }
+    ++j;
+    for( ; j < nEnd; ++j)
+      {
+      const double td1 = (azimuthTime - theOrbitRecords[j].azimuthTime).total_microseconds();
+      const double td2 = (theOrbitRecords[i].azimuthTime - theOrbitRecords[j].azimuthTime).total_microseconds();
+      w*=td1/td2;
       }
 
     sensorPos[0]+=w*theOrbitRecords[i].position[0];
@@ -593,26 +597,29 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
   // Compute corresponding image position
   ossimDpt currentImPoint(initGcp.imPt);
 
-  ossim_float64 currentImResidual = (target-currentImPoint).length();
+  ossim_float64 currentImSquareResidual = squareDistance(target,currentImPoint);
   double currentHeightResidual = initGcp.worldPt.height() - hgtRef->getRefHeight(initGcp.worldPt);
 
   bool init = true;
 
   unsigned int iter = 0;
 
+  // TODO: Every time the function is called, an allocation (+a free) is done.
+  // This is not efficient. => Find a static matrix of 3x3 elements
+  // Moreover, NEWMAT implies a lot of objet creations, hence allocations
   NEWMAT::SymmetricMatrix BtB(3);
   NEWMAT::ColumnVector BtF(3);
   NEWMAT::ColumnVector F(3);
   NEWMAT::ColumnVector dR(3);
 
-  // Stop condition: img residual < 1e-2 pixels, height residual <
-  // 0.01 m, nb iter < 50. init ensure that loop runs at least once.
-  while((init || (currentImResidual > 0.01 || std::abs(currentHeightResidual) > 0.01))  && iter < 50)
+  // Stop condition: img residual < 1e-2 pixels, height residual² <
+  // 0.01² m, nb iter < 50. init ensure that loop runs at least once.
+  while((init || (currentImSquareResidual > (0.01*0.01) || std::abs(currentHeightResidual) > 0.01))  && iter < 50)
     {
     if(init)
       init =false;
 
-    // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<'\n';
+    // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImSquareResidual<<", hgt="<<currentHeightResidual<<'\n';
 
     // compute residuals
     F(1) = target.x - currentImPoint.x;
@@ -673,17 +680,16 @@ bool ossimSarSensorModel::projToSurface(const GCPRecordType & initGcp, const oss
     const ossim_float64 atHgt = hgtRef->getRefHeight(currentEstimationWorld);
     currentHeightResidual = atHgt - currentEstimationWorld.height();
 
-    ossimDpt newImPoint;
     worldToLineSample(currentEstimationWorld,currentImPoint);
 
     // std::cout<<currentImPoint<<'\n';
 
-    currentImResidual = (currentImPoint-target).length();
+    currentImSquareResidual = squareDistance(currentImPoint,target);
 
     ++iter;
     }
 
-  // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImResidual<<", hgt="<<currentHeightResidual<<'\n';
+  // std::cout<<"Iter: "<<iter<<", Res: im="<<currentImSquareResidual<<", hgt="<<currentHeightResidual<<'\n';
 
   ellPt = currentEstimation;
   return true;
@@ -756,13 +762,13 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
 
 bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(double resTol)
 {
-  resTol *= resTol;
+  resTol *= resTol; // as internally we won't be using sqrt on norms
 
   // First, split half of the gcps to serve as tests, and remove them
   // temporarily from theGCPRecord.
   std::vector<GCPRecordType> gcpRecordSave, testGcps,refGcps;
 
-  gcpRecordSave = theGCPRecords;
+  gcpRecordSave.swap(theGCPRecords); // steal the data; `gcpRecordSave = move(theGCPRecords);` in C++11
 
   unsigned int count = 0;
 
@@ -789,7 +795,7 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(double resTol)
   for(std::vector<GCPRecordType>::const_iterator gcpIt = testGcps.begin(); gcpIt!=testGcps.end();++gcpIt,++gcpId)
     {
     ossimGpt estimatedWorldPt;
-    const ossimGpt refPt = gcpIt->worldPt;
+    ossimGpt const& refPt = gcpIt->worldPt;
 
     double estimatedRangeTime;
     TimeType estimatedAzimuthTime;
@@ -816,14 +822,13 @@ bool ossimSarSensorModel::autovalidateForwardModelFromGCPs(double resTol)
       }
     }
 
-  theGCPRecords = gcpRecordSave;
+  theGCPRecords.swap(gcpRecordSave);
 
   return success;
 }
 
 void ossimSarSensorModel::optimizeTimeOffsetsFromGcps()
 {
-
   double cumulRangeTime(0), cumulAzimuthTime(0);
   unsigned int count=0;
 
