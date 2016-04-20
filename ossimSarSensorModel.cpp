@@ -728,7 +728,7 @@ bool ossimSarSensorModel::autovalidateInverseModelFromGCPs(const double & xtol, 
           =  s1
           && (std::abs(estimatedImPt.x - gcpIt->imPt.x) <= xtol)
           && (std::abs(estimatedImPt.y - gcpIt->imPt.y) <= ytol)
-          && (std::abs((estimatedAzimuthTime-gcpIt->azimuthTime).total_microseconds() <= azTimeTol))
+          && (std::abs((estimatedAzimuthTime-gcpIt->azimuthTime).total_microseconds()) <= azTimeTol)
           && (std::abs(estimatedRangeTime - gcpIt->slantRangeTime) <= rangeTimeTol)
           ;
 
