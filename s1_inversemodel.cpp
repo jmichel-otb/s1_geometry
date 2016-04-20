@@ -12,17 +12,15 @@
 #include <ossim/base/ossimGpt.h>
 
 
-typedef boost::tuple<boost::posix_time::ptime,ossimEcefPoint,ossimEcefVector> RecordType;
-typedef boost::tuple<boost::posix_time::ptime,double,ossimDpt,ossimGpt> GCPType;
-typedef std::vector<RecordType> RecordVectorType;
-typedef std::vector<GCPType> GCPVectorType;
+typedef boost::tuple<boost::posix_time::ptime,ossimEcefPoint,ossimEcefVector>                       RecordType;
+typedef boost::tuple<boost::posix_time::ptime,double,ossimDpt,ossimGpt>                             GCPType;
+typedef std::vector<RecordType>                                                                     RecordVectorType;
+typedef std::vector<GCPType>                                                                        GCPVectorType;
 typedef boost::tuple<boost::posix_time::ptime,unsigned long,boost::posix_time::ptime,unsigned long> BurstRecordType;
-typedef std::vector<BurstRecordType> BurstRecordVectorType;
+typedef std::vector<BurstRecordType>                                                                BurstRecordVectorType;
 
-typedef boost::tuple<boost::posix_time::ptime,double,std::vector<double> > SRGRRecordType;
-typedef std::vector<SRGRRecordType> SRGRRecordVectorType;
-
-
+typedef boost::tuple<boost::posix_time::ptime,double,std::vector<double> >                          SRGRRecordType;
+typedef std::vector<SRGRRecordType>                                                                 SRGRRecordVectorType;
 
 const double C = 299792458;
 

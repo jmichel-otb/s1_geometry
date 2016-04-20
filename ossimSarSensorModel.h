@@ -211,32 +211,20 @@ protected:
   bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
 
   std::vector<OrbitRecordType>                theOrbitRecords;
-
   std::vector<GCPRecordType>                  theGCPRecords;
-
   std::vector<BurstRecordType>                theBurstRecords;
-
   std::vector<CoordinateConversionRecordType> theSlantRangeToGroundRangeRecords;
-
   std::vector<CoordinateConversionRecordType> theGroundRangeToSlantRangeRecords;
 
   double                                      theRadarFrequency; // in Hz
-
   double                                      theAzimuthTimeInterval; // in microseconds
-
   double                                      theNearRangeTime; // in seconds
-
   double                                      theRangeSamplingRate; // in Hz
-
   double                                      theRangeResolution; // in meters
-
   bool                                        theBistaticCorrectionNeeded; // Do we need to compute
                                                                            // bistatic correction ?
-
   bool                                        isGRD; // True if the product is GRD. False if it is SLC
-
   double                                      theAzimuthTimeOffset; // Offset in microseconds
-
   double                                      theRangeTimeOffset; // Offset in seconds;
 
   static const double C;
