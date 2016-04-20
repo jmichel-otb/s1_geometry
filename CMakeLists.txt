@@ -1,39 +1,46 @@
 cmake_minimum_required(VERSION 2.6)
+SET(CMAKE_MODULE_PATH "${${PROJECT_NAME}_SOURCE_DIR}/cmake;${CMAKE_MODULE_PATH}")
 
-# Orfeo ToolBox
-find_package(OTB REQUIRED
-  COMPONENTS OTBImageIO OTBVectorDataIO OTBProjection OTBStatistics)
-if(OTB_FOUND)
-  MESSAGE(STATUS "OTB found")
-  include(${OTB_USE_FILE})
-else(OTB_FOUND)
-  message(FATAL_ERROR "OTB not found. Please set OTB_DIR")
-endif(OTB_FOUND)
-
-
+# Boost
 find_package ( Boost
   1.35.0
   REQUIRED
   COMPONENTS date_time
   )
 
-MESSAGE("${Boost_LIBRARIES}")
+MESSAGE("Boost libraries used and found: ${Boost_LIBRARIES}")
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+# Ossim
+find_package(ossim)
+message(STATUS "OSSIM_INSTALL_PREFIX: $ENV{OSSIM_INSTALL_PREFIX}")
+if (NOT OSSIM_FOUND)
+    message(FATAL_ERROR "Cannot find OSSIM.")
+endif()
 
-add_executable(s1_inversemodel s1_inversemodel.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
-target_link_libraries(s1_inversemodel ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+
+# s1_inversemodel
+include_directories(${CMAKE_CURRENT_SOURCE_DIR} ${OSSIM_INCLUDE_DIR})
+
+add_executable(s1_inversemodel
+    s1_inversemodel.cpp ossimSarSensorModel.cpp
+    ossimSentinel1SarSensorModel.cpp xmlTools.cpp
+    )
+target_link_libraries(s1_inversemodel
+    ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
 
 #Test executables
-add_executable(ossimSarSensorModelTest ossimSarSensorModelTest.cpp ossimSarSensorModel.cpp)
-target_link_libraries(ossimSarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(ossimSarSensorModelTest ossimSarSensorModelTest.cpp ossimSarSensorModel.cpp xmlTools.cpp)
+target_link_libraries(ossimSarSensorModelTest
+    ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
-add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp)
-target_link_libraries(ossimSentinel1SarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(ossimSentinel1SarSensorModelTest ossimSentinel1SarSensorModelTest.cpp ossimSarSensorModel.cpp ossimSentinel1SarSensorModel.cpp xmlTools.cpp)
+target_link_libraries(ossimSentinel1SarSensorModelTest
+    ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
-add_executable(ossimTerraSarXSarSensorModelTest ossimTerraSarXSarSensorModelTest.cpp ossimSarSensorModel.cpp ossimTerraSarXSarSensorModel.cpp)
-target_link_libraries(ossimTerraSarXSarSensorModelTest ${OTB_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(ossimTerraSarXSarSensorModelTest ossimTerraSarXSarSensorModelTest.cpp ossimSarSensorModel.cpp ossimTerraSarXSarSensorModel.cpp xmlTools.cpp)
+target_link_libraries(ossimTerraSarXSarSensorModelTest
+    ${Boost_LIBRARIES} ${OSSIM_LIBRARIES})
 
 #Use ctest
 enable_testing()
