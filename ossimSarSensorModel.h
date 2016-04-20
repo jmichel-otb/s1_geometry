@@ -83,10 +83,8 @@ public:
   virtual ~ossimSarSensorModel() = default;
 #endif
 
-  /** Not yet implemented */
   virtual void lineSampleHeightToWorld(const ossimDpt& imPt, const double & heightEllipsoid, ossimGpt& worldPt) const;
 
-  /** Not yet implemented */
   virtual void lineSampleToWorld(const ossimDpt& imPt, ossimGpt& worldPt) const;
 
 
@@ -110,10 +108,10 @@ public:
    * \return True if sucess, false otherwise. In this case,
    * azimuthTime and rangeTime will not be modified.
    */
-  virtual bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
+  /*virtual*/ bool worldToAzimuthRangeTime(const ossimGpt& worldPt, TimeType & azimuthTime, double & rangeTime) const;
 
   // TODO: document me
-  virtual void lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
+  /*virtual*/ void lineSampleToAzimuthRangeTime(const ossimDpt & imPt, TimeType & azimuthTime, double & rangeTime) const;
 
   // TODO: document me
   bool autovalidateInverseModelFromGCPs(const double & xtol = 1, const double & ytol = 1, const double azTimeTol = 500, const double &rangeTimeTo=0.0000000001) const;
@@ -128,10 +126,8 @@ public:
 
   /**
    * Returns pointer to a new instance, copy of this.
-   * Not implemented yet!  Returns NULL...
-   *
    */
-  ossimObject* dup() const;
+  virtual ossimObject* dup() const;
 
   //TODO: Add virtual method readAnnotationFile?
 
@@ -158,7 +154,7 @@ protected:
    * \param[out] sensorvel Interpolated sensor velocity
    * \param[in] deg Degree of lagragian interpolation
    */
-  virtual void interpolateSensorPosVel(const TimeType & azimuthTime, ossimEcefPoint& sensorPos, ossimEcefVector& sensorVel, unsigned int deg = 8) const;
+  /*virtual*/ void interpolateSensorPosVel(const TimeType & azimuthTime, ossimEcefPoint& sensorPos, ossimEcefVector& sensorVel, unsigned int deg = 8) const;
 
   /**
    * Convert slant range to ground range by interpolating slant range
@@ -168,13 +164,13 @@ protected:
    * \param[in] azimuthTime The corresponding azimuth time
    * \param[out] groundRange The estimated ground range (meters)
    */
-  virtual void slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const;
+  /*virtual*/ void slantRangeToGroundRange(const double & slantRange, const TimeType & azimuthTime, double & groundRange) const;
 
   // TODO: Document me
-  virtual void groundRangeToSlantRange(const double & groundRange, const TimeType & azimuthTime, double & slantRange) const;
+  /*virtual*/ void groundRangeToSlantRange(const double & groundRange, const TimeType & azimuthTime, double & slantRange) const;
 
   // TODO: Document me
-  virtual void applyCoordinateConversion(const double & in, const TimeType& azimuthTime, const std::vector<CoordinateConversionRecordType> & records, double & out) const;
+  /*virtual*/ void applyCoordinateConversion(const double & in, const TimeType& azimuthTime, const std::vector<CoordinateConversionRecordType> & records, double & out) const;
   /**
    * Estimate the zero-doppler azimuth time and corresponding sensor
    * position and velocity from the inputPt.
@@ -186,7 +182,7 @@ protected:
    * \return True if success, false otherwise. In this case, output
    * parameters are left untouched.
    */
-  virtual bool zeroDopplerLookup(const ossimEcefPoint & inputPt, TimeType & interpAzimuthTime, ossimEcefPoint & interpSensorPos, ossimEcefVector & interpSensorVel) const;
+  /*virtual*/ bool zeroDopplerLookup(const ossimEcefPoint & inputPt, TimeType & interpAzimuthTime, ossimEcefPoint & interpSensorPos, ossimEcefVector & interpSensorVel) const;
 
   /**
    * Compute the bistatic correction to apply.
@@ -195,7 +191,7 @@ protected:
    * \param[in] sensorPos The corresponding sensor position
    * \param[out] bistaticCorrection The estimated bistatic correction
    */
-  virtual void computeBistaticCorrection(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, DurationType & bistaticCorrection) const;
+  /*virtual*/ void computeBistaticCorrection(const ossimEcefPoint & inputPt, const ossimEcefPoint & sensorPos, DurationType & bistaticCorrection) const;
 
   /**
    * Convert azimuth time to fractional line.
@@ -203,13 +199,16 @@ protected:
    * \param[in] azimuthTime The azimuth time to convert
    * \param[out] The estimated fractional line
    */
-  virtual void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
+  /*virtual*/ // TODO: check why virtual
+  void azimuthTimeToLine(const TimeType & azimuthTime, double & line) const;
 
   // TODO: document me
-  virtual void lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
+  /*virtual*/ // TODO: check why virtual
+  void lineToAzimuthTime(const double & line, TimeType & azimuthTime) const;
 
   // TODO: document me
-  virtual bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
+  /*virtual*/ // TODO: check why virtual
+  bool projToSurface(const GCPRecordType & initGcp, const ossimDpt & target, const ossimHgtRef * hgtRef, ossimEcefPoint & ellpt) const;
 
   std::vector<OrbitRecordType>                theOrbitRecords;
 
