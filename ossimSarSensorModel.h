@@ -240,7 +240,7 @@ protected:
 
   double                                      theRangeTimeOffset; // Offset in seconds;
 
-  static const double C = 299792458;
+  static const double C;
 private:
   /** Disabled assignment operator.  */
   ossimSarSensorModel& operator=(ossimSarSensorModel const& rhs);

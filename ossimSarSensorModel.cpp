@@ -33,6 +33,7 @@ namespace {// Anonymous namespace
 
 namespace ossimplugins
 {
+const double ossimSarSensorModel::C = 299792458;
 
 ossimSarSensorModel::ossimSarSensorModel()
   : theOrbitRecords(),
